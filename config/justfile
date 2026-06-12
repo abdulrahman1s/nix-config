@@ -370,3 +370,109 @@ restart service="":
 # Check service status
 status service:
     systemctl status {{service}}
+
+# agenix secrets — `secret <view|edit|add|remove> [name]` (e.g. `os secret view rclone.conf`)
+secret action="" name="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    dir="$HOME/system-conf/secrets"
+    rules="$dir/secrets.nix"
+    action="{{action}}"
+    name="{{name}}"
+
+    # fzf-pick an existing secret name (without the .age suffix)
+    pick() { basename -a -s .age "$dir"/*.age | fzf --prompt='secret ❯ ' --height=40% --reverse; }
+
+    case "$action" in
+      view)
+        [ -n "$name" ] || { name=$(pick) || exit 0; }
+        name="${name%.age}"
+        if [ ! -f "$dir/$name.age" ]; then
+            echo "No secret '$name' in $dir. Available:" >&2
+            basename -a -s .age "$dir"/*.age >&2
+            exit 1
+        fi
+        # agenix -d reads RULES from ./secrets.nix and uses the file's basename
+        # as the rule key, so run it from inside the secrets dir. Decrypts with
+        # ~/.ssh/id_ed25519 (the recipient key in secrets.nix).
+        cd "$dir" && agenix -d "$name.age"
+        ;;
+      edit)
+        [ -n "$name" ] || { name=$(pick) || exit 0; }
+        name="${name%.age}"
+        # agenix re-encrypts to every recipient in secrets.nix on save (no-op
+        # if the content is unchanged).
+        cd "$dir" && agenix -e "$name.age"
+        ;;
+      add)
+        [ -n "$name" ] || { echo "Usage: secret add <name>" >&2; exit 1; }
+        name="${name%.age}"
+        age="$name.age"
+        if [ -f "$dir/$age" ] || grep -qF "\"$age\".publicKeys" "$rules"; then
+            echo "$age already exists — use 'secret edit $name'" >&2
+            exit 1
+        fi
+        # Reuse the recipient list from an existing rule so keys aren't hardcoded.
+        recipients=$(grep -oE '\.publicKeys = \[[^]]*\];' "$rules" | head -1 | sed 's/^\.publicKeys = //')
+        [ -n "$recipients" ] || { echo "Couldn't read recipients from $rules" >&2; exit 1; }
+        # Splice the new rule in just before the attrset's closing brace.
+        newrule="  \"$age\".publicKeys = $recipients"
+        awk -v rule="$newrule" '
+            { lines[NR] = $0 }
+            END {
+                for (i = NR; i >= 1; i--) if (lines[i] ~ /^}[[:space:]]*$/) { c = i; break }
+                if (!c) { print "no closing brace in rules file" > "/dev/stderr"; exit 1 }
+                for (i = 1; i <= NR; i++) { if (i == c) print rule; print lines[i] }
+            }
+        ' "$rules" > "$rules.tmp" && mv "$rules.tmp" "$rules"
+        echo "Added rule for $age to secrets.nix"
+        # Enter the value; agenix encrypts to the recipients on save.
+        cd "$dir"
+        if agenix -e "$age"; then
+            echo "Created $dir/$age — 'git add' it before rebuild."
+        else
+            echo "Editor aborted; rule left in secrets.nix (no $age created)." >&2
+            exit 1
+        fi
+        ;;
+      remove|rm|delete)
+        [ -n "$name" ] || { name=$(pick) || exit 0; }
+        name="${name%.age}"
+        age="$name.age"
+        if [ ! -f "$dir/$age" ] && ! grep -qF "\"$age\".publicKeys" "$rules"; then
+            echo "No secret '$name' in $dir" >&2
+            exit 1
+        fi
+        # Warn if it's still wired into the NixOS config — the build breaks if
+        # an age.secrets.*.file points at a deleted .age.
+        refs=$(grep -rln --include='*.nix' -F "$age" "$HOME/system-conf" | grep -vF "$rules" || true)
+        if [ -n "$refs" ]; then
+            echo "⚠️  $age is still referenced in:" >&2
+            echo "$refs" | sed 's/^/    /' >&2
+            echo "   Remove its age.secrets.* wiring there too, or the build will fail." >&2
+        fi
+        read -r -p "Remove $age (delete file + rule)? [y/N] " reply || true
+        [[ "$reply" == [yY]* ]] || { echo "Aborted."; exit 0; }
+        if grep -qF "\"$age\".publicKeys" "$rules"; then
+            grep -vF "\"$age\".publicKeys" "$rules" > "$rules.tmp" && mv "$rules.tmp" "$rules"
+            echo "Removed rule for $age from secrets.nix"
+        fi
+        if [ -f "$dir/$age" ]; then
+            rm -f "$dir/$age"
+            echo "Deleted $dir/$age — 'git add -A' to stage the removal."
+        fi
+        ;;
+      ""|-h|--help|help)
+        echo "Usage: secret <view|edit|add|remove> [name]" >&2
+        echo "  view   [name]   decrypt to stdout      (no name → fzf-pick)" >&2
+        echo "  edit   [name]   edit in \$EDITOR        (no name → fzf-pick)" >&2
+        echo "  add    <name>   create a new secret    (adds a rule to secrets.nix)" >&2
+        echo "  remove [name]   delete file + rule     (no name → fzf-pick; confirms)" >&2
+        exit 1
+        ;;
+      *)
+        echo "secret: unknown action '$action' (use view | edit | add | remove)" >&2
+        exit 1
+        ;;
+    esac

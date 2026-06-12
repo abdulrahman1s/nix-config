@@ -5,7 +5,7 @@
     [
       ./hardware-configuration.nix
       ./packages.nix
-      ./services.nix
+      ./services
 
       # Feature modules
       ./modules/gaming.nix

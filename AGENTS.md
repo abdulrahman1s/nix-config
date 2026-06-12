@@ -54,7 +54,8 @@ flake.nix / flake.lock  inputs: nixpkgs, nixos-hardware, nixpak, nix-cachyos-ker
 specialArgs.nix         injected via _module.args: username, fullName, email, hostname
 hardware-configuration.nix  generated; do not hand-edit
 packages.nix            system-wide packages
-services.nix            system services
+services/                system services, one file per service (cloudflare, juicefs,
+                        avahi, dokploy, slim); default.nix is the imports aggregator
 modules/                feature toggles (ai, gaming, development, ios, niri-dynamic-float,
                         remote-control, vicinae)
 system/                 OS layer (audio, graphics, networking, security, optimization)

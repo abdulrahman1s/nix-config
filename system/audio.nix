@@ -1,29 +1,8 @@
-# PipeWire audio stack and internet radio streaming.
+# PipeWire audio stack.
 { pkgs, username, ... }:
 
 let
-  sampleRate = 44100;
-  radioPort = 4444;
-  hardening = import ./hardening.nix;
-
-  # Generate liquidsoap config from Nix so sampleRate stays in sync
-  # with PipeWire's default.clock.rate above.
-  radioConfig = pkgs.writeText "radio.liq" ''
-    settings.frame.audio.samplerate := ${toString sampleRate}
-
-    radio = mksafe(input.pulseaudio(device="RadioSink.monitor"))
-
-    output.harbor(
-      %mp3(bitrate=128, stereo=true),
-      mount="/stream.mp3",
-      port=${toString radioPort},
-      radio
-    )
-  '';
-
-  pulseClientConfig = pkgs.writeText "radio-pulse-client.conf" ''
-    autospawn = no
-  '';
+  sampleRate = 44100; # mirrored in services/radio.nix (liquidsoap samplerate)
 in
 {
   # ── PipeWire ─────────────────────────────────────────────
@@ -46,19 +25,6 @@ in
         "default.clock.min-quantum" = 512;
         "default.clock.max-quantum" = 512;
       };
-
-      "99-radio-sink"."context.objects" = [
-        {
-          factory = "adapter";
-          args = {
-            "factory.name" = "support.null-audio-sink";
-            "node.name" = "RadioSink";
-            "node.description" = "Stream to Internet Radio";
-            "media.class" = "Audio/Sink";
-            "audio.position" = "FL,FR";
-          };
-        }
-      ];
     };
 
     wireplumber.extraConfig."50-nvidia-hdmi-profile" = {
@@ -72,34 +38,6 @@ in
           };
         }
       ];
-    };
-  };
-
-  # ── Liquidsoap internet radio ────────────────────────────
-  # Runs as a user service so it has access to PipeWire's RadioSink.
-  systemd.user.services.radio = {
-    description = "Liquidsoap internet radio stream";
-    after = [ "pipewire.service" "pipewire-pulse.service" ];
-    requires = [ "pipewire-pulse.service" ];
-    wantedBy = [ "default.target" ];
-
-    serviceConfig = {
-      ExecStart = "${pkgs.liquidsoap}/bin/liquidsoap ${radioConfig}";
-      Environment = "PULSE_CLIENTCONFIG=${pulseClientConfig}";
-      Restart = "on-failure";
-      RestartSec = 5;
-    } // hardening // {
-      # Sandboxing — limit blast radius if liquidsoap is compromised.
-      # Shared baseline in ./hardening.nix; below are radio-specific keys.
-      ProtectHome = "tmpfs";
-      StateDirectory = "liquidsoap";
-      RuntimeDirectory = "liquidsoap";
-      ReadWritePaths = [ "%t/pulse" ];
-      RestrictSUIDSGID = true;
-      RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" "AF_INET6" ];
-      CapabilityBoundingSet = "";
-      SystemCallFilter = [ "@system-service" "~@privileged" "~@resources" ];
-      SystemCallArchitectures = "native";
     };
   };
 

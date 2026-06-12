@@ -51,9 +51,12 @@
 
     github-fs.url = "github:abdulrahman1s/github-fs";
     github-fs.inputs.nixpkgs.follows = "nixpkgs";
+
+    juicefs-nix.url = "github:abdulrahman1s/juicefs-nix";
+    juicefs-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, agenix, nixpak, nixos-hardware, nix-cachyos-kernel, noctalia, brave-previews, nix-dokploy, github-fs, qsh, ... } @ inputs:
+  outputs = { self, nixpkgs, agenix, nixpak, nixos-hardware, nix-cachyos-kernel, noctalia, brave-previews, nix-dokploy, github-fs, qsh, juicefs-nix, ... } @ inputs:
     let
       system = "x86_64-linux";
       userArgs = import ./specialArgs.nix;
@@ -69,6 +72,7 @@
           nix-dokploy.nixosModules.default
           qsh.nixosModules.default
           github-fs.nixosModules.default
+          juicefs-nix.nixosModules.default
           { nixpkgs.overlays = [ nix-cachyos-kernel.overlays.pinned ]; }
           nixos-hardware.nixosModules.asus-rog-strix-x570e
           nixos-hardware.nixosModules.common-gpu-nvidia-nonprime

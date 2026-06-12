@@ -227,8 +227,8 @@ link to its clipboard, or shut it down from my phone.
 [`secrets/`](secrets/) (safe to commit), recipient keys in
 [`secrets/secrets.nix`](secrets/secrets.nix). Each is decrypted at activation to
 `/run/agenix/<name>` and handed to services via systemd `LoadCredential`, not an
-env var. Tracked: Cloudflare Tunnel token, rclone config, Dokploy DB
-password/auth secret, NextDNS upstream.
+env var. Tracked: Cloudflare Tunnel token, JuiceFS credentials/encryption key,
+Dokploy DB password/auth secret, NextDNS upstream.
 
 ## Validation
 

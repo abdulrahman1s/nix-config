@@ -33,7 +33,7 @@ let
   };
 
   fsSysctl = {
-    # IDEs, file watchers (rclone), and Docker need many watches.
+    # IDEs and Docker need many watches.
     "fs.inotify.max_user_watches" = 524288;
     "fs.inotify.max_user_instances" = 1024;
   };

@@ -63,7 +63,6 @@
     openssl
     yubikey-personalization
     fuse3
-    rclone
   ];
 
 
