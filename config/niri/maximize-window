@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+if niri msg -j focused-window | jq -e '.is_floating' >/dev/null; then niri msg action fullscreen-window; else niri msg action maximize-column; fi

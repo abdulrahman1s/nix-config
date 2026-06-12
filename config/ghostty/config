@@ -1,0 +1,65 @@
+# Font
+font-family = FiraCode Nerd Font
+font-family = Noto Naskh Arabic
+font-family = DejaVu Sans
+font-size = 22
+
+# Window
+window-padding-x = 16
+window-padding-y = 16
+window-padding-balance = true
+background-opacity = 0.7
+quit-after-last-window-closed = false
+window-decoration = none
+gtk-single-instance = true
+
+# Scrollback
+scrollback-limit = 10000000
+mouse-scroll-multiplier = 3
+
+
+# Colors
+foreground = #e0e0e0
+background = #000000
+selection-foreground = #000000
+selection-background = #fffacd
+minimum-contrast = 1.1
+
+palette = 0=#000000
+palette = 1=#cc5555
+palette = 2=#55cc55
+palette = 3=#cdcd55
+palette = 4=#5555cc
+palette = 5=#cc55cc
+palette = 6=#fffacd
+palette = 7=#cccccc
+palette = 8=#555555
+palette = 9=#ff5555
+palette = 10=#55ff55
+palette = 11=#ffff55
+palette = 12=#5555ff
+palette = 13=#ff55ff
+palette = 14=#55ffff
+palette = 15=#ffffff
+
+# Mouse
+mouse-hide-while-typing = true
+
+# URL
+link-url = true
+
+# Grapheme shaping
+grapheme-width-method = unicode
+
+
+# Keybindings
+#keybind = ctrl+c=copy_to_clipboard:mixed
+
+# New windows inherit the active Ghostty terminal's PWD
+working-directory = inherit
+window-inherit-working-directory = true
+
+# Long-running commands
+notify-on-command-finish = unfocused
+notify-on-command-finish-action = no-bell,notify
+notify-on-command-finish-after = 10s

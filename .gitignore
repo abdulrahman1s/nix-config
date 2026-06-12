@@ -1,0 +1,26 @@
+# Nix build outputs
+result
+result-*
+.direnv/
+
+# Local credentials and environment
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/*.age
+!secrets/secrets.nix
+*.token
+*.key
+*.p12
+*.pfx
+credentials.json
+
+# Local agent state
+.claude/
+
+
+# Editor and OS noise
+*.swp
+*.swo
+.DS_Store

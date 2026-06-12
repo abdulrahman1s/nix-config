@@ -1,0 +1,288 @@
+#!/usr/bin/env sh
+# Toggle "peek" for floating windows: stash them as small slivers in the
+# bottom-right and bottom-left corners. Two slots, one per corner.
+#
+# Behavior on press:
+#   * Focused floating already in a slot  → restore on the current workspace
+#                                           (focus + saved position/center).
+#   * Focused floating not in any slot    → peek into a free slot
+#                                           (right preferred), or bump the
+#                                           older slot if both are full.
+#   * No floating focused, $last set      → re-peek $last (free slot,
+#                                           else bump older).
+#   * No floating focused, no $last       → restore the more recently
+#                                           peeked slot (LIFO).
+#
+# Also accepts:
+#   restore-right / restore-left  pop just that slot (used by hot corners).
+#   swap                          swap the contents of the two slots; if
+#                                 only one is occupied, move it to the
+#                                 other corner.
+mode=""
+case "${1:-}" in
+    restore-right|restore-left|swap) mode="$1"; shift ;;
+esac
+
+peek_w=${1:-80}
+peek_h=${2:-60}
+
+state_dir="${XDG_RUNTIME_DIR:-/tmp}/niri-peek"
+mkdir -p "$state_dir"
+active_right="$state_dir/active-right"
+active_left="$state_dir/active-left"
+last="$state_dir/last"
+
+windows=$(niri msg --json windows) || exit 1
+out=$(niri msg --json focused-output) || exit 1
+sw=$(printf '%s' "$out" | jq -r .logical.width)
+sh=$(printf '%s' "$out" | jq -r .logical.height)
+
+is_floating_window() {
+    printf '%s' "$windows" \
+        | jq -e --argjson id "$1" '.[] | select(.id == $id and .is_floating)' \
+        >/dev/null
+}
+
+window_width() {
+    printf '%s' "$windows" \
+        | jq -r --argjson id "$1" '.[] | select(.id == $id) | .layout.window_size[0]'
+}
+
+current_workspace_ref() {
+    niri msg --json workspaces 2>/dev/null | jq -r '
+        .[] | select(.is_focused)
+        | if .name then .name else (.idx | tostring) end
+    '
+}
+
+# Always use relative deltas. Two reasons:
+#   * niri's CLI parses bare "-N" as a relative subtraction, so absolute
+#     negative coordinates aren't expressible.
+#   * Absolute -y is offset from tile_pos.y by the layer-shell exclusion
+#     zone (e.g. ~34px for the noctalia top bar). Relative deltas
+#     preserve tile_pos round-trips; absolute doesn't.
+move_to() {
+    target_x=$2
+    target_y=$3
+    pos=$(printf '%s' "$windows" | jq -r --argjson id "$1" \
+        '.[] | select(.id == $id)
+        | "\(.layout.tile_pos_in_workspace_view[0]|floor) \(.layout.tile_pos_in_workspace_view[1]|floor)"')
+    cur_x=${pos% *}
+    cur_y=${pos#* }
+    sx=$(printf '%+d' $((target_x - cur_x)))
+    sy=$(printf '%+d' $((target_y - cur_y)))
+    niri msg action move-floating-window --id "$1" "-x=$sx" "-y=$sy"
+}
+
+save_pos() {
+    pos=$(printf '%s' "$windows" | jq -r --argjson id "$1" \
+        '.[] | select(.id == $id)
+        | "\(.layout.tile_pos_in_workspace_view[0]|floor) \(.layout.tile_pos_in_workspace_view[1]|floor)"')
+    [ -n "$pos" ] && printf '%s' "$pos" > "$state_dir/pos-$1"
+}
+
+# niri silently ignores set-window-urgent on the currently focused window,
+# so we have to step focus elsewhere before tagging.
+mark_urgent() {
+    cur=$(niri msg --json focused-window 2>/dev/null | jq -r '.id // empty')
+    [ "$cur" = "$1" ] && niri msg action focus-window-previous 2>/dev/null
+    niri msg action set-window-urgent --id "$1"
+}
+
+peek_right() {
+    save_pos "$1"
+    move_to "$1" $((sw - peek_w)) $((sh - peek_h))
+    mark_urgent "$1"
+    printf '%s' "$1" > "$active_right"
+}
+
+peek_left() {
+    # Window's right edge sits at peek_w from the left of the screen.
+    save_pos "$1"
+    w=$(window_width "$1")
+    move_to "$1" $((peek_w - w)) $((sh - peek_h))
+    mark_urgent "$1"
+    printf '%s' "$1" > "$active_left"
+}
+
+restore() {
+    target_workspace=$(current_workspace_ref)
+    niri msg action unset-window-urgent --id "$1" 2>/dev/null
+    if [ -n "$target_workspace" ]; then
+        niri msg action move-window-to-workspace --window-id "$1" --focus=false "$target_workspace" 2>/dev/null
+    fi
+    niri msg action focus-window --id "$1"
+    pos_file="$state_dir/pos-$1"
+    if [ -f "$pos_file" ]; then
+        saved=$(cat "$pos_file")
+        rm -f "$pos_file"
+        move_to "$1" "${saved% *}" "${saved#* }"
+    else
+        niri msg action center-column
+    fi
+    printf '%s' "$1" > "$last"
+}
+
+read_slot() { [ -f "$1" ] && cat "$1"; }
+
+focused_floating=$(printf '%s' "$windows" \
+    | jq -r '.[] | select(.is_focused and .is_floating) | .id')
+
+right_id=$(read_slot "$active_right")
+left_id=$(read_slot "$active_left")
+
+# Drop stale slots (window closed or no longer floating).
+[ -n "$right_id" ] && ! is_floating_window "$right_id" && { rm -f "$active_right" "$state_dir/pos-$right_id"; right_id=""; }
+[ -n "$left_id" ]  && ! is_floating_window "$left_id"  && { rm -f "$active_left"  "$state_dir/pos-$left_id";  left_id=""; }
+
+# Swap mode: exchange the two slots' windows. If only one slot is
+# occupied, move that window to the empty corner (an "swap with empty").
+# Saved pre-peek positions are preserved for both windows.
+if [ "$mode" = "swap" ]; then
+    if [ -n "$right_id" ] && [ -n "$left_id" ]; then
+        wr=$(window_width "$right_id")
+        move_to "$right_id" $((peek_w - wr)) $((sh - peek_h))
+        move_to "$left_id"  $((sw - peek_w)) $((sh - peek_h))
+        printf '%s' "$right_id" > "$active_left"
+        printf '%s' "$left_id"  > "$active_right"
+    elif [ -n "$right_id" ]; then
+        wr=$(window_width "$right_id")
+        move_to "$right_id" $((peek_w - wr)) $((sh - peek_h))
+        printf '%s' "$right_id" > "$active_left"
+        rm -f "$active_right"
+    elif [ -n "$left_id" ]; then
+        move_to "$left_id" $((sw - peek_w)) $((sh - peek_h))
+        printf '%s' "$left_id" > "$active_right"
+        rm -f "$active_left"
+    fi
+    exit 0
+fi
+
+# Hot-corner mode: this slot only. Predictable regardless of focus.
+#   * slot occupied → un-peek it.
+#   * slot empty    → snap the focused floating window into it; if nothing
+#                     floating is focused, fall back to the most-recently
+#                     focused floating window that isn't already peeked.
+#   * otherwise     → no-op.
+if [ -n "$mode" ]; then
+    case "$mode" in
+        restore-right)
+            this_active="$active_right"; this_id="$right_id"
+            other_id="$left_id"
+            this_peek=peek_right
+            ;;
+        restore-left)
+            this_active="$active_left";  this_id="$left_id"
+            other_id="$right_id"
+            this_peek=peek_left
+            ;;
+    esac
+
+    if [ -n "$this_id" ]; then
+        rm -f "$this_active"
+        restore "$this_id"
+    else
+        target="$focused_floating"
+        if [ -z "$target" ]; then
+            target=$(printf '%s' "$windows" | jq -r \
+                --argjson rid "${right_id:-0}" --argjson lid "${left_id:-0}" '
+                [.[] | select(.is_floating and .id != $rid and .id != $lid)]
+                | sort_by([.focus_timestamp.secs // 0, .focus_timestamp.nanos // 0])
+                | last | .id // empty
+            ')
+        fi
+        if [ -n "$target" ] && [ "$target" != "$other_id" ]; then
+            "$this_peek" "$target"
+            rm -f "$last"
+        fi
+    fi
+    exit 0
+fi
+
+if [ -n "$focused_floating" ]; then
+    # Focused floating is already peeked → restore it.
+    if [ "$focused_floating" = "$right_id" ]; then
+        rm -f "$active_right"
+        restore "$focused_floating"
+        exit 0
+    fi
+    if [ "$focused_floating" = "$left_id" ]; then
+        rm -f "$active_left"
+        restore "$focused_floating"
+        exit 0
+    fi
+
+    # Not peeked → put it into a free slot.
+    if [ -z "$right_id" ]; then
+        peek_right "$focused_floating"
+        rm -f "$last"
+        exit 0
+    fi
+    if [ -z "$left_id" ]; then
+        peek_left "$focused_floating"
+        rm -f "$last"
+        exit 0
+    fi
+
+    # Both slots full → bump the older one (by mtime).
+    older=$(ls -t "$active_right" "$active_left" | tail -1)
+    if [ "$older" = "$active_right" ]; then
+        rm -f "$active_right"
+        restore "$right_id"
+        peek_right "$focused_floating"
+    else
+        rm -f "$active_left"
+        restore "$left_id"
+        peek_left "$focused_floating"
+    fi
+    rm -f "$last"
+    exit 0
+fi
+
+# No floating focused. If $last is a valid floating window not currently
+# peeked, prefer re-peeking it over restoring a different slot — "bring
+# back what I just put away" beats "pop the other corner".
+if [ -f "$last" ]; then
+    candidate=$(cat "$last")
+    if is_floating_window "$candidate" \
+        && [ "$candidate" != "$right_id" ] \
+        && [ "$candidate" != "$left_id" ]; then
+        if [ -z "$right_id" ]; then
+            peek_right "$candidate"
+        elif [ -z "$left_id" ]; then
+            peek_left "$candidate"
+        else
+            older=$(ls -t "$active_right" "$active_left" | tail -1)
+            if [ "$older" = "$active_right" ]; then
+                rm -f "$active_right"
+                restore "$right_id"
+                peek_right "$candidate"
+            else
+                rm -f "$active_left"
+                restore "$left_id"
+                peek_left "$candidate"
+            fi
+        fi
+        rm -f "$last"
+        exit 0
+    fi
+    rm -f "$last"
+fi
+
+# Otherwise restore the more recent slot (LIFO).
+if [ -n "$right_id" ] || [ -n "$left_id" ]; then
+    if [ -n "$right_id" ] && [ -n "$left_id" ]; then
+        newer=$(ls -t "$active_right" "$active_left" | head -1)
+    elif [ -n "$right_id" ]; then
+        newer="$active_right"
+    else
+        newer="$active_left"
+    fi
+    if [ "$newer" = "$active_right" ]; then
+        rm -f "$active_right"
+        restore "$right_id"
+    else
+        rm -f "$active_left"
+        restore "$left_id"
+    fi
+fi

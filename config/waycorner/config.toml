@@ -1,0 +1,18 @@
+# Hot corners that un-peek floating windows stashed by
+# ~/.config/niri/peek-floating-window.
+#
+# Cursor sits in the bottom-right (or bottom-left) sliver area for
+# `timeout_ms` and the corresponding slot is restored to the centre.
+# If the slot is empty, the script no-ops.
+
+[peek-bottom-right]
+locations = ["bottom_right"]
+size = 50
+timeout_ms = 100
+enter_command = ["sh", "-c", "~/.config/niri/peek-floating-window restore-right"]
+
+[peek-bottom-left]
+locations = ["bottom_left"]
+size = 50
+timeout_ms = 100
+enter_command = ["sh", "-c", "~/.config/niri/peek-floating-window restore-left"]

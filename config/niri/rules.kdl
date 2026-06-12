@@ -1,0 +1,157 @@
+window-rule {
+    match app-id=r#"^brave-browser$"#
+    match app-id=r#"^brave-origin-nightly$"#
+    match app-id=r#"^firefox$"#
+    open-on-workspace "main"
+}
+
+window-rule {
+    match app-id=r#"^com\.mitchellh\.ghostty$"#
+    match app-id=r#"^dev\.zed\.Zed$"#
+    match app-id=r#"^code$"#
+    open-on-workspace "dev"
+}
+
+window-rule {
+    match app-id=r#"^brave-browser$"#
+    match app-id=r#"^brave-origin-nightly$"#
+    match app-id=r#"^code$"#
+    match app-id=r#"^brave-youtube\.com__-.*$"#
+    match app-id=r#"^vlc$"#
+    open-maximized true
+}
+
+window-rule {
+    match app-id=r#"^brave-music\.youtube\.com__-.*$"#
+    open-floating true
+    default-column-width {
+        proportion 0.2
+    }
+}
+
+
+window-rule {
+    match app-id=r#"^org\.gnome\.Calculator$"#
+    match app-id=r#"^steam$"#
+    match app-id=r#"^io\.missioncenter\.MissionCenter$"#
+    match title="Picture in picture"
+    match app-id=r#"^brave-.*$"# title="_crx_nngceckbapebfimnlniiiahkandclblb" // bitwarden extenstion
+    match app-id=r#"^net\.davidotek\.pupgui2$"#
+    match app-id=r#"^org\.pulseaudio\.pavucontrol$"#
+
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"^org\.gnome\.baobab$"# // Disk usage analyzer
+    open-floating true
+    default-column-width { proportion 0.4; }
+    default-window-height { proportion 0.5; }
+}
+
+window-rule {
+    match app-id=r#"^gnome-pomodoro$"#
+    open-floating true
+    default-column-width { proportion 0.2; }
+    default-window-height { proportion 0.2; }
+}
+
+// Blur + popup blur for every window. Opacity itself comes from the
+// GTK theme (gtk-{3,4}.0/gtk.css) — opaque apps show no blur anyway,
+// so this is safe as a global default.
+window-rule {
+    background-effect {
+        xray true
+       blur true
+    }
+
+    popups {
+        // Matches the default libadwaita pop-up corner radius.
+        geometry-corner-radius 15
+        background-effect {
+            blur true
+        }
+    }
+}
+
+blur {
+    // off
+    passes 4
+    offset 3
+    noise 0.02
+    saturation 1.5
+}
+
+window-rule {
+    match app-id=r#"^brave-browser$"# title="DevTools"
+    match app-id=r#"^brave-origin-nightly$"# title="DevTools"
+    default-floating-position x=60 y=40 relative-to="bottom-right"
+    opacity 0.9
+    default-column-width { proportion 0.4; }
+    default-window-height { proportion 0.9; }
+    open-floating true
+}
+
+window-rule {
+    geometry-corner-radius 12 // Set every window radius to 20
+    clip-to-geometry true
+}
+
+window-rule {
+    match app-id=r#"^steam_app_.*$"#
+    geometry-corner-radius 0
+}
+
+window-rule {
+    match app-id=r#"^org\.remmina\.Remmina$"#
+    match title="Remmina Remote Desktop Client"
+    open-floating true
+}
+
+// Peeked floating windows: peek-floating-window sets is-urgent on peek
+// and unsets it on restore, so urgency doubles as the "is peeked" tag.
+// Noctalia only watches workspace-level urgency, so this stays silent
+// on the bar.
+window-rule {
+    match is-floating=true is-urgent=true
+    opacity 0.4
+    geometry-corner-radius 100
+
+    shadow {
+        off
+    }
+
+    background-effect {
+        xray false
+        blur false
+    }
+}
+
+// Indicate screencasted windows with red colors.
+window-rule {
+    match is-window-cast-target=true
+
+    focus-ring {
+        active-color "#f38ba8"
+        inactive-color "#7d0d2d"
+    }
+
+    border {
+        inactive-color "#7d0d2d"
+    }
+
+    shadow {
+        color "#7d0d2d70"
+    }
+
+    tab-indicator {
+        active-color "#f38ba8"
+        inactive-color "#7d0d2d"
+    }
+}
+
+// Set the overview wallpaper on the backdrop.
+layer-rule {
+    match namespace="^noctalia-overview*"
+    place-within-backdrop true
+}

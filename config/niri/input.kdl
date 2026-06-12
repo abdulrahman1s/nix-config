@@ -1,0 +1,18 @@
+input {
+    // make the mouse warp to the center of newly focused windows.
+   // warp-mouse-to-focus
+
+    keyboard {
+        xkb {
+            layout "us,ara"
+            options "grp:win_space_toggle"
+        }
+        repeat-delay 300
+        repeat-rate 50
+    }
+    mouse {
+        accel-speed 0.0
+    }
+    
+   focus-follows-mouse // Automatically focus windows under the mouse pointer
+}

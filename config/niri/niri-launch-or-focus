@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+
+# Script to launch an app or focus if already open using niri IPC
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 <command> [--id <app_id>] [--tui] [--toggle-previous] [--focus-existing] [--debug]"
+    echo ""
+    echo "Arguments:"
+    echo "  <command>    The command to run if the app is not already open"
+    echo "  --id <app_id> Optional app_id to identify the app (defaults to <command> if not provided)"
+    echo ""
+    echo "Options:"
+    echo "  -h, --help   Show this help message"
+    echo "  --tui        Launch in kitty terminal (wraps command with 'kitty --class <id>')"
+    echo "  --toggle-previous"
+    echo "               If the matched app is already focused, focus the previously focused window"
+    echo "  --focus-existing"
+    echo "               Focus an existing matching window instead of launching a new one"
+    echo "  --debug      Enable debug output"
+    echo ""
+    echo "By default, this script launches a new window and focuses it using niri IPC."
+    echo "Use --focus-existing to focus an open matching window instead."
+}
+
+# Parse arguments
+CMD=""
+ID=""
+DEBUG=0
+TUI=0
+TOGGLE_PREVIOUS=0
+FOCUS_NEW=1
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    --debug)
+        DEBUG=1
+        shift
+        ;;
+    --tui)
+        TUI=1
+        shift
+        ;;
+    --toggle-previous)
+        TOGGLE_PREVIOUS=1
+        shift
+        ;;
+    --focus-existing)
+        FOCUS_NEW=0
+        shift
+        ;;
+    --id)
+        if [[ -n "$2" && "$2" != -* ]]; then
+            ID="$2"
+            shift 2
+        else
+            echo "Error: --id requires an argument."
+            usage
+            exit 1
+        fi
+        ;;
+    -*)
+        echo "Unknown option: $1"
+        usage
+        exit 1
+        ;;
+    *)
+        if [[ -z "$CMD" ]]; then
+            CMD="$1"
+        else
+            echo "Error: Too many arguments. Expected only one command."
+            usage
+            exit 1
+        fi
+        shift
+        ;;
+    esac
+done
+
+# Check if CMD is provided
+if [[ -z "$CMD" ]]; then
+    echo "Error: Command is required."
+    usage
+    exit 1
+fi
+
+# If ID not provided, use CMD as fallback
+if [[ -z "$ID" ]]; then
+    ID="$CMD"
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: Using CMD as ID: $ID"; fi
+else
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: Using provided ID: $ID"; fi
+fi
+
+# Wrap command with kitty if TUI mode
+if [[ "$TUI" == "1" ]]; then
+    CMD="launch-tui $CMD"
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: TUI mode enabled, command is now: $CMD"; fi
+fi
+
+if [[ "$DEBUG" == "1" ]]; then echo "Debug: Checking for open app with ID: $ID"; fi
+
+WINDOWS_JSON=$(niri msg --json windows) || exit 1
+
+# Check if app is already open using niri's JSON output.
+mapfile -t WINDOW_IDS < <(
+    jq -r --arg id "$ID" '.[] | select(.app_id == $id) | .id' <<<"$WINDOWS_JSON"
+)
+
+if [[ "$FOCUS_NEW" == "1" ]]; then
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: Spawning and waiting for a new window: $CMD"; fi
+    niri msg action spawn -- sh -c "$CMD" || exit 1
+
+    for _ in {1..60}; do
+        NEW_WINDOW_ID=$(
+            niri msg --json windows 2>/dev/null |
+                jq -r --arg id "$ID" '
+                    $ARGS.positional as $existing
+                    | [.[] | select(.app_id == $id) | .id
+                       | select((tostring as $window_id
+                                 | $existing | index($window_id)) == null)]
+                    | max // empty
+                ' --args "${WINDOW_IDS[@]}"
+        )
+
+        if [[ -n "$NEW_WINDOW_ID" ]]; then
+            if [[ "$DEBUG" == "1" ]]; then echo "Debug: Focusing new window ID: $NEW_WINDOW_ID"; fi
+            niri msg action focus-window --id "$NEW_WINDOW_ID"
+            exit $?
+        fi
+
+        sleep 0.05
+    done
+
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: Timed out waiting for the new window."; fi
+    exit 1
+elif [[ ${#WINDOW_IDS[@]} -gt 0 ]]; then
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: Found ${#WINDOW_IDS[@]} window(s): ${WINDOW_IDS[*]}"; fi
+
+    # Get the currently focused window ID. This is also used for cycling when
+    # there are multiple matching windows.
+    FOCUSED_ID=$(niri msg --json focused-window 2>/dev/null | jq -r '.id // empty')
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: Focused window ID: $FOCUSED_ID"; fi
+
+    if [[ "$TOGGLE_PREVIOUS" == "1" ]]; then
+        for wid in "${WINDOW_IDS[@]}"; do
+            if [[ "$wid" == "$FOCUSED_ID" ]]; then
+                if [[ "$DEBUG" == "1" ]]; then echo "Debug: Matched app is focused. Focusing previously focused window."; fi
+                niri msg action focus-window-previous
+                exit $?
+            fi
+        done
+    fi
+
+    if [[ ${#WINDOW_IDS[@]} -eq 1 ]]; then
+        niri msg action focus-window --id "${WINDOW_IDS[0]}"
+    else
+        # Find the focused window in the list and cycle to the next one
+        NEXT=0
+        for i in "${!WINDOW_IDS[@]}"; do
+            if [[ "${WINDOW_IDS[$i]}" == "$FOCUSED_ID" ]]; then
+                NEXT=$(( (i + 1) % ${#WINDOW_IDS[@]} ))
+                break
+            fi
+        done
+
+        if [[ "$DEBUG" == "1" ]]; then echo "Debug: Cycling to window ID: ${WINDOW_IDS[$NEXT]}"; fi
+        niri msg action focus-window --id "${WINDOW_IDS[$NEXT]}"
+    fi
+else
+    if [[ "$DEBUG" == "1" ]]; then echo "Debug: App not open. Spawning: $CMD"; fi
+    niri msg action spawn -- sh -c "$CMD"
+fi

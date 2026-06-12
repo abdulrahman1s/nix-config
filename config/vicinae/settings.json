@@ -1,0 +1,177 @@
+// This configuration is merged with the default vicinae configuration file, which you can obtain by running the `vicinae config default` command.
+// Every item defined in this file takes precedence over the values defined in the default config or any other imported file.
+//
+// You can make manual edits to this file, however you should keep in mind that this file may be written to by vicinae when a configuration change is made through the GUI.
+// When that happens, any custom comments or formatting will be lost.
+//
+// If you want to maintain a configuration file with your own comments and formatting, you should create a separate file and add it to the 'imports' array.
+//
+// Learn more about configuration at https://docs.vicinae.com/config
+
+{
+   "$schema": "https://vicinae.com/schemas/config.json",
+   "activate_on_single_click": true,
+   "favicon_service": "google",
+   "font": {
+      "normal": {
+         "size": 12
+      }
+   },
+   "theme": {
+      "dark": {
+         "name": "vicinae-dark"
+      }
+   },
+   "launcher_window": {
+      "opacity": 0.8,
+      "client_side_decorations": {
+         "enabled": true
+      }
+   },
+   "keybinds": {
+      "toggle-action-panel": "control+RETURN"
+   },
+   "favorites": [
+      "applications:org.gnome.Nautilus",
+      "applications:io.missioncenter.MissionCenter",
+      "clipboard:history"
+   ],
+   "providers": {
+      "@gebeto/google-translate": {
+         "preferences": {
+            "autoInput": true,
+            "defaultAction": "copy",
+            "lang1": "auto",
+            "lang2": "ar"
+         },
+         "entrypoints": {
+            "instant-translate-copy": {
+               "enabled": false
+            },
+            "instant-translate-paste": {
+               "enabled": false
+            },
+            "instant-translate-view": {
+               "enabled": false
+            },
+            "translate": {
+               "enabled": false
+            },
+            "translate-form": {
+               "enabled": false
+            }
+         }
+      },
+      "@knoopx/stocks": {
+         "preferences": {
+            "refreshInterval": "60",
+            "symbols": "SPUS,UMMA,BTC-USD"
+         }
+      },
+      "applications": {
+         "entrypoints": {
+            "com.sandboxed.brave-vault": {
+               "enabled": false
+            }
+         }
+      },
+      "clipboard": {
+         "preferences": {
+            "encryption": false,
+            "eraseOnStartup": false,
+            "ignorePasswords": true,
+            "monitoring": true
+         },
+         "entrypoints": {
+            "clear": {
+               "enabled": false
+            },
+            "clear-history": {
+               "enabled": false
+            }
+         }
+      },
+      "core": {
+         "entrypoints": {
+            "about": {
+               "enabled": false
+            },
+            "documentation": {
+               "enabled": false
+            },
+            "oauth-token-store": {
+               "enabled": false
+            },
+            "report-bug": {
+               "enabled": false
+            },
+            "search-builtin-icons": {
+               "enabled": false
+            },
+            "sponsor": {
+               "enabled": false
+            }
+         }
+      },
+      "developer": {
+         "enabled": false
+      },
+      "files": {
+         "enabled": false,
+         "preferences": {
+            "autoIndexing": true,
+            "excludedPaths": "",
+            "paths": "/home/abdulrahman",
+            "watcherPaths": ""
+         }
+      },
+      "font": {
+         "entrypoints": {
+            "browse": {
+               "enabled": false
+            }
+         }
+      },
+      "manage-shortcuts": {
+         "enabled": false
+      },
+      "power": {
+         "entrypoints": {
+            "hibernate": {
+               "enabled": false
+            },
+            "sleep": {
+               "enabled": false
+            },
+            "soft-reboot": {
+               "enabled": false
+            },
+            "suspend": {
+               "enabled": false
+            }
+         }
+      },
+      "raycast-compat": {
+         "entrypoints": {
+            "store": {
+               "enabled": true
+            }
+         }
+      },
+      "system": {
+         "enabled": true,
+         "entrypoints": {
+            "browse-apps": {
+               "enabled": true
+            }
+         }
+      },
+      "theme": {
+         "entrypoints": {
+            "set": {
+               "enabled": true
+            }
+         }
+      }
+   }
+}

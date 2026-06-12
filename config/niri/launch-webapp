@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+URL="$1"
+PROFILE="$2"
+
+# TODO: check for BROWSER env var and that it's Chromium
+
+show_help() {
+    echo "Usage: $0 URL [PROFILE]"
+    echo "Launch a Brave webapp for the given URL."
+    echo ""
+    echo "URL: The domain of the webapp (e.g., open.spotify.com)"
+    echo "PROFILE: Optional Brave profile name (e.g., Default)"
+}
+
+if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    show_help
+    exit 0
+fi
+
+if [ $# -gt 2 ]; then
+    echo "Error: Too many arguments."
+    show_help
+    exit 1
+fi
+
+if [ -z "$URL" ]; then
+    echo "Error: URL is required."
+    show_help
+    exit 1
+fi
+
+CMD=("brave" "--app=https://$URL")
+if [ -n "$PROFILE" ]; then
+    CMD+=("--profile-directory=$PROFILE")
+fi
+
+"${CMD[@]}" &

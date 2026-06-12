@@ -1,0 +1,105 @@
+binds {
+    // ─── Help ───
+    Mod+Shift+Slash repeat=false { show-hotkey-overlay; }
+
+    // ─── Applications ───
+
+    Mod+X hotkey-overlay-title="Open a Terminal " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus 'ghostty +new-window' --id com.mitchellh.ghostty"; }
+    Mod+Shift+X hotkey-overlay-title="Cycle Terminals " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus ghostty --id com.mitchellh.ghostty --focus-existing"; }
+    Mod+B hotkey-overlay-title="Open a Browser " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus brave --id brave-origin-nightly --toggle-previous --focus-existing"; }
+    Mod+Shift+B hotkey-overlay-title="Open a Firefox " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus firefox --id firefox --focus-existing"; }
+    Mod+N hotkey-overlay-title="Open a FileManager " repeat=false { spawn "nautilus" "-w"; }
+    Mod+S hotkey-overlay-title="Open Launcher" repeat=false { spawn "vicinae" "toggle"; }
+    Mod+P hotkey-overlay-title="Open Mission Center " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus missioncenter --id io.missioncenter.MissionCenter --toggle-previous --focus-existing"; }
+    Mod+V hotkey-overlay-title="Open Clipboard " repeat=false  { spawn "vicinae" "vicinae://launch/clipboard/history"; }
+    Mod+E hotkey-overlay-title="Open Emoji Picker " repeat=false  { spawn "vicinae" "vicinae://launch/core/search-emojis"; }
+
+    
+    Mod+M repeat=false hotkey-overlay-title="Open YT Music (Webapp)" { spawn-sh "~/.config/niri/niri-launch-or-focus-webapp music.youtube.com"; }
+    Mod+Y repeat=false hotkey-overlay-title="Open YouTube (Webapp)" { spawn-sh "~/.config/niri/niri-launch-or-focus-webapp youtube.com"; }
+    // Mod+{ spawn-sh "noctalia-shell ipc call launcher emoji"; }
+    Mod+Shift+E repeat=false { expand-column-to-available-width; }
+
+
+    // ─── Session ───
+    // Mod+Alt+L hotkey-overlay-title="Lock screen"   { spawn-sh "noctalia-shell ipc call lockScreen lock"; }
+    Mod+Shift+Q repeat=false { spawn-sh "noctalia-shell ipc call sessionMenu toggle"; }
+
+    // ─── Window Management ───
+    Mod+Q repeat=false { close-window; }
+    Mod+T repeat=false { toggle-window-floating; }
+    Mod+D hotkey-overlay-title="Peek floating window to a bottom corner" repeat=false { spawn-sh "~/.config/niri/peek-floating-window"; }
+    Mod+Shift+D hotkey-overlay-title="Swap peeked-window corners" repeat=false { spawn-sh "~/.config/niri/peek-floating-window swap"; }
+    Mod+W repeat=false { toggle-column-tabbed-display; }
+    Mod+C { center-column; }
+
+    // ─── Focus ───
+    Mod+Tab hotkey-overlay-title="Cycle Windows of Current App" repeat=false { spawn-sh "~/.config/niri/cycle-same-app"; }
+    Mod+Left  { focus-column-left; }
+    Mod+Right { focus-column-right; }
+    Mod+Up    { focus-workspace-up; }
+    Mod+Down  { focus-workspace-down; }
+    Shift+Up    { focus-workspace-up; }
+    Shift+Down  { focus-workspace-down; }
+
+    // ─── Workspaces ───
+    Mod+1 { focus-workspace "main"; }
+    Mod+2 { focus-workspace "dev"; }
+
+    Mod+Ctrl+1 { move-column-to-workspace "main"; }
+    Mod+Ctrl+2 { move-column-to-workspace "dev"; }
+
+
+    // ─── Move Windows ───
+    Mod+Ctrl+Left  { move-column-left; }
+    Mod+Ctrl+Right { move-column-right; }
+    Mod+Ctrl+Up    { move-window-up; }
+    Mod+Ctrl+Down  { move-window-down; }
+
+    // ----- Media ----------
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn-sh "wpctl set-volume -l 1.4 @DEFAULT_AUDIO_SINK@ 5%+"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn-sh "wpctl set-volume -l 1.4 @DEFAULT_AUDIO_SINK@ 5%-"; }
+    XF86AudioMute         allow-when-locked=true repeat=false { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    XF86AudioMicMute      allow-when-locked=true repeat=false { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
+
+    // ─── Resize ───
+    Mod+Minus       { set-column-width "-10%"; }
+    Mod+Equal       { set-column-width "+10%"; }
+    Mod+Shift+Minus { set-window-height "-10%"; }
+    Mod+Shift+Equal { set-window-height "+10%"; }
+    Mod+F repeat=false { 
+       // reset-window-height;
+         // maximize-column; 
+       spawn-sh "~/.config/niri/maximize-window";
+    }
+
+    Mod+Shift+F repeat=false { fullscreen-window; }
+
+    Mod+Comma  { consume-or-expel-window-left; }
+    Mod+Period { consume-or-expel-window-right; }
+    
+    Mod+WheelScrollDown  cooldown-ms=150  { spawn-sh "~/.config/niri/focus-column right"; }
+    Mod+WheelScrollUp    cooldown-ms=150  { spawn-sh "~/.config/niri/focus-column left"; }
+    Shift+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
+    Shift+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
+    Mod+Shift+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
+    Mod+Shift+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
+
+
+    // ─── Monitor ───
+    Mod+Shift+Left       { focus-monitor-left; }
+    Mod+Shift+Right      { focus-monitor-right; }
+    Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
+    Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
+
+    End repeat=false { screenshot; }
+
+
+    // ─── Overview ───
+    Mod+O repeat=false { toggle-overview; }
+
+    // ─── Power / Quit ───
+    Mod+Shift+P repeat=false { power-off-monitors; }
+    Ctrl+Alt+Delete repeat=false { quit; }
+    Mod+Escape allow-inhibiting=false repeat=false { toggle-keyboard-shortcuts-inhibit; }
+}

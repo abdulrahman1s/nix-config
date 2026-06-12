@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+FOCUSED_WINDOW=$(niri msg --json focused-window)
+FOCUSED_ID=$(jq -r '.id // empty' <<<"$FOCUSED_WINDOW")
+APP_ID=$(jq -r '.app_id // empty' <<<"$FOCUSED_WINDOW")
+
+if [[ -z "$FOCUSED_ID" || -z "$APP_ID" ]]; then
+    exit 0
+fi
+
+mapfile -t WINDOW_IDS < <(
+    niri msg --json windows |
+        jq -r --arg app_id "$APP_ID" '.[] | select(.app_id == $app_id) | .id'
+)
+
+if [[ ${#WINDOW_IDS[@]} -lt 2 ]]; then
+    exit 0
+fi
+
+NEXT_WINDOW_ID=${WINDOW_IDS[0]}
+
+for i in "${!WINDOW_IDS[@]}"; do
+    if [[ "${WINDOW_IDS[$i]}" == "$FOCUSED_ID" ]]; then
+        NEXT_WINDOW_ID=${WINDOW_IDS[$(( (i + 1) % ${#WINDOW_IDS[@]} ))]}
+        break
+    fi
+done
+
+niri msg action focus-window --id "$NEXT_WINDOW_ID"

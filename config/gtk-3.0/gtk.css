@@ -1,0 +1,14 @@
+@import url("file:///run/current-system/sw/share/themes/adw-gtk3-dark/gtk-3.0/gtk.css");
+
+/* ── Tweakables ── (same idea as gtk-4.0/gtk.css) */
+@define-color base_color rgb(30, 30, 30);
+@define-color tint alpha(@base_color, 0.6);
+@define-color subtle alpha(white, 0.05);
+
+@define-color theme_bg_color @tint;
+@define-color theme_base_color @tint;
+@define-color headerbar_bg_color @tint;
+@define-color sidebar_bg_color @tint;
+
+@define-color borders @subtle;
+@define-color unfocused_borders @subtle;

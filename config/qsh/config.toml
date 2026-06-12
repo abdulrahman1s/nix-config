@@ -1,0 +1,65 @@
+provider = "gemini"
+# qsh config
+# Generated automatically. Edit with `qsh config edit` or `qsh config set`.
+# All keys are optional. Precedence: CLI > .qshrc > this file > env vars > defaults.
+
+# ─── core ──────────────────────────────────────────────────────────────────
+# Default provider when no CLI flag, env var, or .qshrc says otherwise.
+# provider = "claude"          # gemini | openai | claude | ollama
+
+# Default mode. "fast" = cheap/low-latency; "smart" = larger budget + reasoning.
+# mode = "fast"
+
+# ─── providers ─────────────────────────────────────────────────────────────
+# Each provider block is independent. `api_key` falls back to the matching
+# env var (e.g. $ANTHROPIC_API_KEY). `model` falls back to the matching
+# *_MODEL env var, then the built-in default for that provider.
+
+# [providers.gemini]
+# api_key = "..."
+# model   = "gemini-3.5-flash"
+# [providers.gemini.tokens]
+# fast  = 500                  # max output tokens in fast mode
+# smart = 16000                # max output tokens in smart mode
+
+[providers.openai]
+backend = "cli"
+# api_key = "..."
+# model   = "gpt-5.4-mini"
+# [providers.openai.tokens]
+# fast  = 500
+# smart = 16000
+
+[providers.claude]
+backend = "cli"
+# api_key = "..."
+# model   = "claude-sonnet-4-6"
+# [providers.claude.tokens]
+# fast            = 500
+# smart           = 10000      # Claude's smart-mode max_tokens
+# thinking_budget = 5000       # Claude-only: extended-thinking budget
+
+# [providers.ollama]
+# model    = "llama3"
+# base_url = "http://127.0.0.1:11434"
+# [providers.ollama.tokens]
+# fast  = 500
+# smart = 16000
+
+# ─── retry replay ──────────────────────────────────────────────────────────
+# The shell wrapper feeds failed-command stderr back to the model so it can
+# self-correct on the next `?` invocation.
+# [retry]
+# keep           = 3           # how many recent failures to keep in history
+# window_minutes = 10          # drop attempts older than this on next run
+
+# ─── stderr capture ────────────────────────────────────────────────────────
+# Maximum bytes of stderr stored per failed attempt.
+# [capture]
+# stderr_bytes = 4096
+
+# ─── network timeouts (seconds) ────────────────────────────────────────────
+# [timeouts]
+# connect_secs = 10
+# fast_secs    = 60
+# smart_secs   = 180

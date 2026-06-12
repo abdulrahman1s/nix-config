@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# Switch to tiling layer first, then move column focus left/right with wrap.
+# Without focus-tiling, Mod+WheelScroll silently no-ops while the floating
+# layer is focused.
+niri msg action focus-tiling
+case "$1" in
+    right) niri msg action focus-column-right ;;
+    left)  niri msg action focus-column-left ;;
+esac

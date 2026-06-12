@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+show_help() {
+    echo "Usage: $0 [OPTIONS] URL"
+    echo "Launch or focus a Brave webapp for the given URL."
+    echo ""
+    echo "URL: The domain of the webapp (e.g., open.spotify.com)"
+    echo ""
+    echo "OPTIONS:"
+    echo "  --debug                Enable debug output"
+    echo "  --profile PROFILE_NAME Specify Brave profile (default: Default)"
+    echo "  -h, --help             Show this help message"
+}
+
+DEBUG=0
+PROFILE="Default"
+URL=""
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    --debug)
+        DEBUG=1
+        shift
+        ;;
+    --profile)
+        if [[ $# -lt 2 || -z "$2" || "$2" == -* ]]; then
+            echo "Error: --profile requires an argument."
+            show_help
+            exit 1
+        fi
+        PROFILE="$2"
+        shift 2
+        ;;
+    --help | -h)
+        show_help
+        exit 0
+        ;;
+    -*)
+        echo "Error: Unknown option $1"
+        show_help
+        exit 1
+        ;;
+    *)
+        if [ -n "$URL" ]; then
+            echo "Error: Multiple URLs provided."
+            exit 1
+        fi
+        URL="$1"
+        shift
+        ;;
+    esac
+done
+
+if [ -z "$URL" ]; then
+    echo "Error: URL is required."
+    echo ""
+    show_help
+    exit 1
+fi
+
+# Construct APP_ID based on the assumed format
+APP_ID="brave-${URL}__-${PROFILE}"
+
+[ "$DEBUG" = 1 ] && echo "URL: $URL"
+[ "$DEBUG" = 1 ] && echo "PROFILE: $PROFILE"
+[ "$DEBUG" = 1 ] && echo "APP_ID: $APP_ID"
+
+# Check if a window with the given app_id is already running.
+[ "$DEBUG" = 1 ] && echo "Checking for existing window with APP_ID: $APP_ID"
+WINDOWS_JSON=$(niri msg --json windows) || exit 1
+mapfile -t WINDOW_IDS < <(
+    jq -r --arg app_id "$APP_ID" \
+        '.[] | select(.app_id == $app_id) | .id' <<<"$WINDOWS_JSON"
+)
+
+if [[ ${#WINDOW_IDS[@]} -gt 0 ]]; then
+    FOCUSED_ID=$(jq -r '.[] | select(.is_focused) | .id // empty' <<<"$WINDOWS_JSON")
+    NEXT=0
+
+    for i in "${!WINDOW_IDS[@]}"; do
+        if [[ "${WINDOW_IDS[$i]}" == "$FOCUSED_ID" ]]; then
+            NEXT=$(( (i + 1) % ${#WINDOW_IDS[@]} ))
+            break
+        fi
+    done
+
+    WINDOW_ID="${WINDOW_IDS[$NEXT]}"
+    [ "$DEBUG" = 1 ] && echo "Window found, focusing ID: $WINDOW_ID"
+    niri msg action focus-window --id "$WINDOW_ID"
+else
+    [ "$DEBUG" = 1 ] && echo "No window found, launching webapp"
+    ~/.config/niri/launch-webapp "$URL" "$PROFILE"
+fi
