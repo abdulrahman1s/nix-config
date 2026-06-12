@@ -42,6 +42,7 @@
 
       # Media
       vlc
+      loupe # GNOME image viewer (native, unsandboxed by request)
       # orca-slicer
 
       # Tools
@@ -57,6 +58,25 @@
   };
 
   users.groups.plugdev = { };
+
+  # ── Default image viewer (loupe) ──────────────────────────
+  xdg.mime.defaultApplications =
+    let
+      loupe = "org.gnome.Loupe.desktop";
+    in
+    {
+      "image/jpeg" = loupe;
+      "image/png" = loupe;
+      "image/gif" = loupe;
+      "image/webp" = loupe;
+      "image/tiff" = loupe;
+      "image/bmp" = loupe;
+      "image/svg+xml" = loupe;
+      "image/avif" = loupe;
+      "image/heif" = loupe;
+      "image/heic" = loupe;
+      "image/jxl" = loupe;
+    };
 
   # ── System Packages ───────────────────────────────────────
   environment.systemPackages = with pkgs; [

@@ -56,6 +56,13 @@ window-rule {
     default-window-height { proportion 0.2; }
 }
 
+window-rule {
+    match app-id=r#"^org\.gnome\.Loupe$"# // loupe image viewer
+    open-floating true
+    default-column-width { proportion 0.5; }
+    default-window-height { proportion 0.6; }
+}
+
 // Blur + popup blur for every window. Opacity itself comes from the
 // GTK theme (gtk-{3,4}.0/gtk.css) — opaque apps show no blur anyway,
 // so this is safe as a global default.

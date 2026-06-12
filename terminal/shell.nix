@@ -100,6 +100,9 @@ let home = "/home/${username}"; in
       vim = "nvim";
       v = "nvim";
 
+      # Open image(s) in loupe
+      see = "loupe";
+
       # Listing (eza — maintained exa fork)
       ls = "eza -la --icons --no-permissions --no-user --git --time-style=long-iso --sort=modified";
       claudex = "claude --dangerously-skip-permissions";
