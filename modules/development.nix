@@ -51,44 +51,44 @@
   # `newuidmap: write to uid_map failed: Operation not permitted`.
   # 1M leaves comfortable headroom for `podman --userns=auto:size=…`.
   users.users.${username} = {
-    subUidRanges = [ { startUid = 100000; count = 1000000; } ];
-    subGidRanges = [ { startGid = 100000; count = 1000000; } ];
+    subUidRanges = [{ startUid = 100000; count = 1000000; }];
+    subGidRanges = [{ startGid = 100000; count = 1000000; }];
     packages = with pkgs; [
-    # Editors
-    vscode
-    zed-editor
+      # Editors
+      vscode
+      zed-editor
 
-    # Container tools
-    lazydocker
+      # Container tools
+      lazydocker
 
-    # Build tools
-    # gnumake
+      # Build tools
+      # gnumake
 
-    # Web development
-    nodejs_24
-    bun
+      # Web development
+      nodejs_24
+      bun
 
-    # Android development
-    # android-tools
-    # javaPackages.compiler.temurin-bin.jre-25
+      # Android development
+      # android-tools
+      # javaPackages.compiler.temurin-bin.jre-25
 
-    # Debugging
-    # insomnia
+      # Debugging
+      # insomnia
 
-    # Nix tooling
-    python3
-    distrobox
-    nixpkgs-fmt
-    nil # Nix LSP
-    nix-prefetch-github
-    nvd
+      # Nix tooling
+      python3
+      distrobox
+      nixpkgs-fmt
+      nil # Nix LSP
+      nix-prefetch-github
+      nvd
 
-    # ETC
-    onefetch
+      # ETC
+      onefetch
 
 
-    stdenv.cc
-    mold
+      stdenv.cc
+      mold
 
     ];
   };

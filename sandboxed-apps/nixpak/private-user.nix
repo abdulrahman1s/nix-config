@@ -90,17 +90,16 @@ let
     in
     builtins.genList mkPrefix (builtins.length parts);
 in
-{
-  runAsUser,
-  hostUser,
-  hostHome ? "/home/${hostUser}",
-  runAsHome ? "/var/lib/${runAsUser}",
-  sudoArgvValidator ? ''reject_arg "$1"'',
-  resourceLimits ? null,
-  envPreserveList ? defaultEnvPreserveList,
-  extraGroups ? defaultExtraGroups,
-  extraDesktopReplacements ? [ ],
-  ...
+{ runAsUser
+, hostUser
+, hostHome ? "/home/${hostUser}"
+, runAsHome ? "/var/lib/${runAsUser}"
+, sudoArgvValidator ? ''reject_arg "$1"''
+, resourceLimits ? null
+, envPreserveList ? defaultEnvPreserveList
+, extraGroups ? defaultExtraGroups
+, extraDesktopReplacements ? [ ]
+, ...
 }@args:
 
 let

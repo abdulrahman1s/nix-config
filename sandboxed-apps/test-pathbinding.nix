@@ -41,9 +41,9 @@ let
 in
 
 pkgs.runCommand "pathbinding-tests"
-  {
-    nativeBuildInputs = [ pkgs.coreutils ];
-  }
+{
+  nativeBuildInputs = [ pkgs.coreutils ];
+}
   ''
     set +e -uo pipefail  # stdenv enables -e; we WANT failures to capture into $?
 

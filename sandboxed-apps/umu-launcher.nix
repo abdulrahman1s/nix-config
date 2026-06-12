@@ -5,6 +5,6 @@ let
 in
 mkUmu {
   name = "exe";
-  extraBinNames = ["umu-run"];
+  extraBinNames = [ "umu-run" ];
   enableNetwork = true;
 }

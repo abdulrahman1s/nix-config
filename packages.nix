@@ -20,36 +20,36 @@
     extraGroups = [ "plugdev" ];
     packages = with pkgs; [
       inputs.brave-previews.packages.${pkgs.stdenv.hostPlatform.system}.brave-origin-nightly
-    
+
       hcxtools
- #   (hashcat.override {
-  #    cudaSupport = true;
-  #  })
+      #   (hashcat.override {
+      #    cudaSupport = true;
+      #  })
 
       kiwix
-    # mosquitto
+      # mosquitto
 
-    # Reverse engineering & security
-    # metasploit
-    # aircrack-ng
-    # hashcat
-    # hashcat-utils
-    # wifite2
+      # Reverse engineering & security
+      # metasploit
+      # aircrack-ng
+      # hashcat
+      # hashcat-utils
+      # wifite2
 
 
-    # Internet & Communication
+      # Internet & Communication
       qbittorrent
 
-    # Media
+      # Media
       vlc
-    # orca-slicer
+      # orca-slicer
 
-    # Tools
+      # Tools
       ethtool
       scrcpy
       just
       nh
-    
+
 
       waycorner # hot-corner daemon for Wayland
       signal-desktop

@@ -28,23 +28,24 @@ let
         if src != null then
           src
         else
-          pkgs.fetchFromGitHub {
-            owner = "raycast";
-            repo = "extensions";
-            rev =
-              if rev != null then
-                rev
-              else
-                throw "mkRayCastExtension: `rev` is required when src isn't supplied";
-            hash =
-              if hash != null then
-                hash
-              else if sha256 != null then
-                sha256
-              else
-                throw "mkRayCastExtension: `hash` or `sha256` is required";
-            sparseCheckout = [ "/extensions/${name}" ];
-          }
+          pkgs.fetchFromGitHub
+            {
+              owner = "raycast";
+              repo = "extensions";
+              rev =
+                if rev != null then
+                  rev
+                else
+                  throw "mkRayCastExtension: `rev` is required when src isn't supplied";
+              hash =
+                if hash != null then
+                  hash
+                else if sha256 != null then
+                  sha256
+                else
+                  throw "mkRayCastExtension: `hash` or `sha256` is required";
+              sparseCheckout = [ "/extensions/${name}" ];
+            }
           + "/extensions/${name}";
     in
     pkgs.buildNpmPackage (

@@ -15,9 +15,9 @@ let
     "vm.max_map_count" = 2147483642;
     # CachyOS-style writeback: fixed bytes (predictable on any RAM size) + longer
     # flush interval. Reduces NVMe write amplification vs. the percent-based defaults.
-    "vm.dirty_bytes" = 268435456;            # 256 MiB foreground threshold
+    "vm.dirty_bytes" = 268435456; # 256 MiB foreground threshold
     "vm.dirty_background_bytes" = 134217728; # 128 MiB background threshold
-    "vm.dirty_writeback_centisecs" = 1500;   # flush every 15s (default 5s)
+    "vm.dirty_writeback_centisecs" = 1500; # flush every 15s (default 5s)
   };
 
   netSysctl = {

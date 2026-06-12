@@ -5,6 +5,6 @@ let
 in
 mkUmu {
   name = "exe-offline";
-  extraBinNames = ["umu-run-offline"];
+  extraBinNames = [ "umu-run-offline" ];
   enableNetwork = false;
 }

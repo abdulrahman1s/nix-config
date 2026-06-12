@@ -25,7 +25,7 @@
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    
+
     nixpak = {
       url = "github:nixpak/nixpak";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -48,7 +48,7 @@
 
     qsh.url = "github:abdulrahman1s/qsh";
     qsh.inputs.nixpkgs.follows = "nixpkgs";
-    
+
     github-fs.url = "github:abdulrahman1s/github-fs";
     github-fs.inputs.nixpkgs.follows = "nixpkgs";
   };

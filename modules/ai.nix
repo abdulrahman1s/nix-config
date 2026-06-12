@@ -8,14 +8,14 @@
 
   users.users.${username}.packages = with pkgs; [
     # Add cuda support
-#    (llama-cpp.override { cudaSupport = true; })
+    #    (llama-cpp.override { cudaSupport = true; })
 
     # llama-cpp
 
 
     # lmstudio
     # gemini-cli-bin
-   #  claude-code
+    #  claude-code
     codex
     rtk # CLI proxy that reduces LLM token consumption by 60-90% on common dev commands. 
     # vllm

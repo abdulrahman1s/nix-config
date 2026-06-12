@@ -25,11 +25,11 @@ in
   # ── HTTP server service ─────────────────────────────────
   systemd.services.remote-control = {
     description = "Remote session control HTTP server";
-    after       = [ "network.target" ];
-    wantedBy    = [ "multi-user.target" ];
+    after = [ "network.target" ];
+    wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      ExecStart  = "${pkgs.python3}/bin/python3 ${server}";
-      Restart    = "always";
+      ExecStart = "${pkgs.python3}/bin/python3 ${server}";
+      Restart = "always";
       RestartSec = "3";
     };
   };

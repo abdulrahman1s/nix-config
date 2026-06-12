@@ -100,47 +100,47 @@ let
     , resourceLimits ? null
     , displayName ? null
     , homeBinds ? { rw = [ ]; ro = [ ]; }
-                          # Host-home bind list: `{ rw, ro }` of `{ suffix; perms?; }`
-                          # entries. Suffix is `$HOME`-relative (e.g. `/Downloads`).
-                          # Each entry becomes a bwrap bind via the cross-uid helper
-                          # (mkHomeBindEntry below) AND is exposed via passthru.homeBinds
-                          # so outer wrappers (mkPrivateUserSandbox) can derive ACL grants
-                          # from the same declaration. perms is interpreted by the ACL
-                          # consumer; this builder doesn't read it.
+      # Host-home bind list: `{ rw, ro }` of `{ suffix; perms?; }`
+      # entries. Suffix is `$HOME`-relative (e.g. `/Downloads`).
+      # Each entry becomes a bwrap bind via the cross-uid helper
+      # (mkHomeBindEntry below) AND is exposed via passthru.homeBinds
+      # so outer wrappers (mkPrivateUserSandbox) can derive ACL grants
+      # from the same declaration. perms is interpreted by the ACL
+      # consumer; this builder doesn't read it.
     , outerBinPath ? null # Override the binary path baked into generated .desktop files.
-                          # When wrapped by another derivation (e.g. mkPrivateUserSandbox)
-                          # the .desktop should point at the outer launcher, not at
-                          # this sandbox's $out/bin/${name}. Pass the outer launcher
-                          # store path here and the .desktop's `Exec=` will use it.
+      # When wrapped by another derivation (e.g. mkPrivateUserSandbox)
+      # the .desktop should point at the outer launcher, not at
+      # this sandbox's $out/bin/${name}. Pass the outer launcher
+      # store path here and the .desktop's `Exec=` will use it.
     , wmClass ? null # Override for apps that set their own window class (e.g. Java)
     , sharePid ? false  # Share the host PID namespace. Required for apps that
-                        # use a PID-based singleton lock in a shared user-data
-                        # dir (Chromium's SingletonLock: a second invocation
-                        # does kill(pid, 0) to check liveness; in its own pidns
-                        # that PID is invisible, so it clobbers the lock the
-                        # first instance still holds and shows "profile in use").
-                        # nixpak hardcodes --unshare-pid in launch.nix; this
-                        # opts out by post-processing the generated bwrap args
-                        # JSON to strip that flag.
+      # use a PID-based singleton lock in a shared user-data
+      # dir (Chromium's SingletonLock: a second invocation
+      # does kill(pid, 0) to check liveness; in its own pidns
+      # that PID is invisible, so it clobbers the lock the
+      # first instance still holds and shows "profile in use").
+      # nixpak hardcodes --unshare-pid in launch.nix; this
+      # opts out by post-processing the generated bwrap args
+      # JSON to strip that flag.
     , pathBinding ? null  # null | "dir" | "file" — narrow the rw bind dynamically.
-                          # "dir":  if $1 is a file, bind its parent directory.
-                          #         if $1 is a directory, bind it as-is.
-                          #         (Default for tools that need sibling files —
-                          #         games with sidecar assets, players with subtitles.)
-                          #         Refuses /, $HOME, and ancestors of $HOME.
-                          # "file": if $1 is a file, bind ONLY that file. Strictest:
-                          #         refuses dir args outright; no-arg launch binds
-                          #         /dev/null as a no-op. NOTE: inner cwd isn't
-                          #         writable — apps that write sidecars next to the
-                          #         input (screenshots, .osd, thumbnails) will fail.
-                          # Single-path: picks the LAST arg that resolves to an
-                          # existing path. Apps with multiple paths
-                          # (`--input /a --output /b`) only get one bound. See
-                          # `path-binding.nix` for full semantics.
-                          # In both modes, the launcher exports SANDBOX_PATH and
-                          # the sandbox rw-binds (sloth.env "SANDBOX_PATH").
-                          # Cannot be a preset: presets configure sandbox internals,
-                          # but this needs to wrap the entry binary itself.
+      # "dir":  if $1 is a file, bind its parent directory.
+      #         if $1 is a directory, bind it as-is.
+      #         (Default for tools that need sibling files —
+      #         games with sidecar assets, players with subtitles.)
+      #         Refuses /, $HOME, and ancestors of $HOME.
+      # "file": if $1 is a file, bind ONLY that file. Strictest:
+      #         refuses dir args outright; no-arg launch binds
+      #         /dev/null as a no-op. NOTE: inner cwd isn't
+      #         writable — apps that write sidecars next to the
+      #         input (screenshots, .osd, thumbnails) will fail.
+      # Single-path: picks the LAST arg that resolves to an
+      # existing path. Apps with multiple paths
+      # (`--input /a --output /b`) only get one bound. See
+      # `path-binding.nix` for full semantics.
+      # In both modes, the launcher exports SANDBOX_PATH and
+      # the sandbox rw-binds (sloth.env "SANDBOX_PATH").
+      # Cannot be a preset: presets configure sandbox internals,
+      # but this needs to wrap the entry binary itself.
     }:
     let
       # Use provided displayName or fallback to package description/name + (Secure)
@@ -196,10 +196,10 @@ let
       effectiveHomeBinds = {
         rw = callerHomeBinds.rw
           ++ pkgs.lib.concatLists
-            (map (p: presetHomeBinds.${p}.rw or [ ]) presets);
+          (map (p: presetHomeBinds.${p}.rw or [ ]) presets);
         ro = callerHomeBinds.ro
           ++ pkgs.lib.concatLists
-            (map (p: presetHomeBinds.${p}.ro or [ ]) presets);
+          (map (p: presetHomeBinds.${p}.ro or [ ]) presets);
       };
 
       # --- PERMISSION PRESETS ---
@@ -294,10 +294,10 @@ let
               # Only expose the /sys subtrees that GPU drivers actually read.
               # Mesa/libdrm needs: /sys/dev/char, /sys/class/drm, /sys/bus/pci
               # NVIDIA driver needs: /sys/bus/pci, /sys/devices (PCI tree walk)
-              "/sys/bus/pci"    # PCI bus enumeration for GPU detection
-              "/sys/class/drm"  # DRM device class
-              "/sys/dev/char"   # Device number → sysfs path mapping
-              "/sys/devices"    # Full device tree (needed for driver init)
+              "/sys/bus/pci" # PCI bus enumeration for GPU detection
+              "/sys/class/drm" # DRM device class
+              "/sys/dev/char" # Device number → sysfs path mapping
+              "/sys/devices" # Full device tree (needed for driver init)
               "/sys/class/hwmon" # NVIDIA driver looks for fan/temp sensors here, but it's not critical
             ];
           };
@@ -436,12 +436,14 @@ let
 
       # Validate preset names and select them
       validPresetNames = builtins.attrNames availablePresets;
-      presetValidation = map (p:
-        assert pkgs.lib.assertMsg
-          (builtins.hasAttr p availablePresets)
-          "mkSandboxed (${name}): unknown preset '${p}'. Available presets: ${builtins.concatStringsSep ", " validPresetNames}";
-        null
-      ) presets;
+      presetValidation = map
+        (p:
+          assert pkgs.lib.assertMsg
+            (builtins.hasAttr p availablePresets)
+            "mkSandboxed (${name}): unknown preset '${p}'. Available presets: ${builtins.concatStringsSep ", " validPresetNames}";
+          null
+        )
+        presets;
       activePresets = builtins.seq presetValidation (map (p: availablePresets.${p}) presets);
 
       appId = "com.sandboxed.${name}";
