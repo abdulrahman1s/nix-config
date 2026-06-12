@@ -1,6 +1,7 @@
 { config, pkgs, username, ... }:
 
 let
+  hardening = import ./system/hardening.nix;
   cloudflareTunnelToken = config.age.secrets.cloudflare-tunnel-token.path;
   rcloneConfig = config.age.secrets.rclone-config.path;
   dokployDbPassword = config.age.secrets.dokploy-db-password.path;
@@ -190,21 +191,10 @@ in
       RestartSec = "5";
       AmbientCapabilities = "CAP_NET_BIND_SERVICE";
       CapabilityBoundingSet = "CAP_NET_BIND_SERVICE";
-
-      # Hardening
-      NoNewPrivileges = true;
-      ProtectSystem = "strict"; # /usr /boot /etc read-only
+    } // hardening // {
+      # Hardening (service-specific; shared baseline in system/hardening.nix)
       ProtectHome = "read-only"; # home dirs read-only …
       ReadWritePaths = [ "/home/${username}/.slim" ]; # … except slim's state dir
-      PrivateTmp = true; # isolated /tmp
-      PrivateDevices = true; # no raw device access
-      ProtectKernelTunables = true; # no /proc/sys writes
-      ProtectKernelModules = true; # no module loading
-      ProtectControlGroups = true; # no cgroup writes
-      ProtectClock = true; # no clock changes
-      ProtectHostname = true; # no hostname changes
-      LockPersonality = true; # no execution domain changes
-      RestrictNamespaces = true; # no new namespaces
       RestrictRealtime = true; # no real-time scheduling
       RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
     };

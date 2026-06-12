@@ -409,9 +409,6 @@ history() {
 }
 
 
-# myip = "curl -s http://ipecho.net/plain; echo";
-#      mylocalip = "hostname -I | awk '{print $1}'";
-
 myip() {
   local addr
   addr="$(curl -s http://ipecho.net/plain)"

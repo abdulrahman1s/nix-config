@@ -217,7 +217,6 @@ let home = "/home/${username}"; in
 
       # ── Custom shell functions ───────────────────────────
       source ${home}/.config/zsh/common.zsh
-      # source ${home}/.config/zsh/ask2.zsh
 
       if [ -f "$HOME/.zsh_secrets" ]; then
         source "$HOME/.zsh_secrets"

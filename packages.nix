@@ -54,9 +54,6 @@
 
       waycorner # hot-corner daemon for Wayland
       signal-desktop
-
-    # Fun
-      cmatrix
     ];
   };
 

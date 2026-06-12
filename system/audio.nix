@@ -4,6 +4,7 @@
 let
   sampleRate = 44100;
   radioPort = 4444;
+  hardening = import ./hardening.nix;
 
   # Generate liquidsoap config from Nix so sampleRate stays in sync
   # with PipeWire's default.clock.rate above.
@@ -87,25 +88,15 @@ in
       Environment = "PULSE_CLIENTCONFIG=${pulseClientConfig}";
       Restart = "on-failure";
       RestartSec = 5;
-
-      # Sandboxing — limit blast radius if liquidsoap is compromised
-      NoNewPrivileges = true;
+    } // hardening // {
+      # Sandboxing — limit blast radius if liquidsoap is compromised.
+      # Shared baseline in ./hardening.nix; below are radio-specific keys.
       ProtectHome = "tmpfs";
-      ProtectSystem = "strict";
       StateDirectory = "liquidsoap";
       RuntimeDirectory = "liquidsoap";
       ReadWritePaths = [ "%t/pulse" ];
-      PrivateTmp = true;
-      PrivateDevices = true;
-      ProtectClock = true;
-      ProtectHostname = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules = true;
-      ProtectControlGroups = true;
-      RestrictNamespaces = true;
       RestrictSUIDSGID = true;
       RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" "AF_INET6" ];
-      LockPersonality = true;
       CapabilityBoundingSet = "";
       SystemCallFilter = [ "@system-service" "~@privileged" "~@resources" ];
       SystemCallArchitectures = "native";

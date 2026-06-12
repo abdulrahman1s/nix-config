@@ -15,7 +15,6 @@
       ./modules/remote-control.nix
       ./modules/niri-dynamic-float.nix
       ./modules/vicinae.nix
-      # ./modules/home-assistant.nix
 
       # System
       ./system/audio.nix
