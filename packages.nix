@@ -39,7 +39,6 @@
 
     # Internet & Communication
       qbittorrent
-   # (pkgs.callPackage ./packages/nekoray-bin { })
 
     # Media
       vlc

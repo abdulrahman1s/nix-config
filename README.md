@@ -46,7 +46,7 @@ boot -> NixOS -> Niri -> Noctalia -> sandboxed apps
 | `sandboxed-apps/` | NixPak-wrapped GUI applications |
 | `terminal/` | Shell, packages, Ghostty, dotfile activation |
 | `config/` | Application and shell configuration |
-| `packages/` | Local package definitions |
+| `secrets/` | agenix-encrypted secrets and recipient keys |
 
 ## Sandboxing Model
 
@@ -61,23 +61,25 @@ Discord, MPV, Minecraft, and UMU launchers all use the same framework.
 
 ## Secrets
 
-Secrets are intentionally absent from the flake and loaded at runtime through
-systemd credentials. The machine expects these root-owned files:
+Secrets are managed with [agenix](https://github.com/ryantm/agenix). The
+encrypted `.age` files live in [`secrets/`](secrets/) and are safe to commit;
+[`secrets/secrets.nix`](secrets/secrets.nix) lists the recipient public keys.
+At activation agenix decrypts each one to `/run/agenix/<name>`; services read it
+from `config.age.secrets.<name>.path` and receive it through a systemd
+`LoadCredential` rather than an environment variable.
 
-```text
-/var/lib/secrets/cloudflare-tunnel-token
-/var/lib/secrets/rclone.conf
-/var/lib/secrets/dokploy-auth-secret
-/var/lib/secrets/dokploy-db-password
-```
+Tracked secrets: the Cloudflare Tunnel token, the rclone backup config, the
+Dokploy database password and auth secret, and the NextDNS upstream.
 
-Create them with directory mode `0700` and file mode `0600`. Never place
-their contents in a Nix string: evaluated strings are copied into the
-world-readable Nix store.
+Edit them with the bundled `agenix` CLI (`agenix -e secrets/<name>.age`). Never
+place a plaintext secret in a Nix string: evaluated strings are copied into the
+world-readable Nix store, which is exactly what the encrypted-file approach
+avoids.
 
-The remote-control bearer token is generated locally on first activation at
-`/etc/remote-control.token`. The service binds only to the configured wired
-LAN address, and the firewall opens its port only on that interface.
+The remote-control bearer token is separate: it is generated locally on first
+activation at `/etc/remote-control.token`. The service binds only to the
+configured wired LAN address, and the firewall opens its port only on that
+interface.
 
 ## Validation
 
