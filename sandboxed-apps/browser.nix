@@ -79,6 +79,12 @@ let
         homeBinds.rw = [
           { suffix = "/.pki/nssdb"; }
           { suffix = "/Downloads"; }
+          # Chromium puts the HTTP disk cache under ~/.cache/<configDir>, NOT in
+          # the user-data-dir. Without binding it through, the cache writes to the
+          # sandbox's ephemeral root and is lost on every browser exit. Bind the
+          # BraveSoftware parent (impermanence-persisted, so it always exists at
+          # bind time) rather than the leaf, which may not exist on a fresh boot.
+          { suffix = "/.cache/BraveSoftware"; }
           { suffix = "/.local/share/applications"; }
           { suffix = "/.local/share/icons"; }
           { suffix = "/.config/mimeapps.list"; perms = "rw"; }

@@ -9,7 +9,9 @@ binds {
     Mod+B hotkey-overlay-title="Open a Browser " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus brave --id brave-origin-nightly --toggle-previous --focus-existing"; }
     Mod+Shift+B hotkey-overlay-title="Open a Firefox " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus firefox --id firefox --focus-existing"; }
     Mod+N hotkey-overlay-title="Open a FileManager " repeat=false { spawn "nautilus" "-w"; }
-    Mod+S hotkey-overlay-title="Open Launcher" repeat=false { spawn "vicinae" "toggle"; }
+    Mod+Space hotkey-overlay-title="Open Launcher" repeat=false { spawn "vicinae" "toggle"; }
+    Mod+S hotkey-overlay-title="Screenshot Region" repeat=false { screenshot; }
+    Mod+Shift+S hotkey-overlay-title="Screenshot Full Screen" repeat=false { screenshot-screen; }
     Mod+P hotkey-overlay-title="Open Mission Center " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus missioncenter --id io.missioncenter.MissionCenter --toggle-previous --focus-existing"; }
     Mod+V hotkey-overlay-title="Open Clipboard " repeat=false  { spawn "vicinae" "vicinae://launch/clipboard/history"; }
     Mod+E hotkey-overlay-title="Open Emoji Picker " repeat=false  { spawn "vicinae" "vicinae://launch/core/search-emojis"; }
@@ -63,15 +65,13 @@ binds {
     XF86AudioMicMute      allow-when-locked=true repeat=false { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
 
     // ─── Resize ───
+    Mod+R           { switch-preset-column-width; }
+    Mod+Shift+R     { switch-preset-window-height; }
     Mod+Minus       { set-column-width "-10%"; }
     Mod+Equal       { set-column-width "+10%"; }
     Mod+Shift+Minus { set-window-height "-10%"; }
     Mod+Shift+Equal { set-window-height "+10%"; }
-    Mod+F repeat=false { 
-       // reset-window-height;
-         // maximize-column; 
-       spawn-sh "~/.config/niri/maximize-window";
-    }
+    Mod+F repeat=false { spawn-sh "~/.config/niri/maximize-window"; }
 
     Mod+Shift+F repeat=false { fullscreen-window; }
 
@@ -84,6 +84,8 @@ binds {
     Shift+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
     Mod+Shift+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
     Mod+Shift+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
+    Mod+Ctrl+WheelScrollDown  cooldown-ms=150 { move-column-right; }
+    Mod+Ctrl+WheelScrollUp    cooldown-ms=150 { move-column-left; }
 
 
     // ─── Monitor ───
@@ -91,9 +93,6 @@ binds {
     Mod+Shift+Right      { focus-monitor-right; }
     Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
     Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
-
-    End repeat=false { screenshot; }
-
 
     // ─── Overview ───
     Mod+O repeat=false { toggle-overview; }

@@ -1,3 +1,31 @@
 #!/usr/bin/env bash
+# Mod+F: gap-respecting maximize toggle.
+#   Tiled    -> maximize-column (native: full size minus gaps, toggles back).
+#   Floating -> fill working area minus gaps, centered; press again restores size.
+# GAP must match `gaps` in layout.kdl.
+GAP=10
 
-if niri msg -j focused-window | jq -e '.is_floating' >/dev/null; then niri msg action fullscreen-window; else niri msg action maximize-column; fi
+win=$(niri msg -j focused-window) || exit 0
+[ -z "$win" ] && exit 0
+
+if [ "$(echo "$win" | jq -r '.is_floating')" != "true" ]; then
+    niri msg action maximize-column
+    exit 0
+fi
+
+id=$(echo "$win" | jq -r '.id')
+state="/tmp/niri-maximize-${id}"
+
+if [ -f "$state" ]; then
+    read -r w h < "$state" && rm -f "$state"
+    niri msg action set-window-width "$w"
+    niri msg action set-window-height "$h"
+    niri msg action center-window
+else
+    echo "$win" | jq -r '"\(.layout.window_size[0]) \(.layout.window_size[1])"' > "$state"
+    niri msg action set-window-width "100%"
+    niri msg action set-window-height "100%"
+    niri msg action set-window-width "-$((GAP * 2))"
+    niri msg action set-window-height "-$((GAP * 2))"
+    niri msg action center-window
+fi

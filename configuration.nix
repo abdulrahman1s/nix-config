@@ -18,10 +18,13 @@
 
       # System
       ./system/audio.nix
+      ./system/bluetooth.nix
       ./system/graphics.nix
       ./system/networking.nix
       ./system/security.nix
       ./system/optimization.nix
+      ./system/impermanence.nix
+      ./system/users.nix
 
       # Terminal & shell
       ./terminal/shell.nix

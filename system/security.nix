@@ -13,6 +13,13 @@
   };
   security.pam.services.sudo.u2f.enable = true;
 
+  # Never print the sudo lecture. Its "already lectured this user" marker lives
+  # in /var/db/sudo on the wiped root, so the default lecture=once would reprint
+  # on the first sudo of every boot under impermanence.
+  security.sudo.extraConfig = ''
+    Defaults lecture=never
+  '';
+
   systemd.services.sandbox-hidraw-devices = {
     description = "Create stable hidraw nodes for sandbox hotplug";
     wantedBy = [ "multi-user.target" ];
@@ -47,4 +54,15 @@
   };
 
   security.polkit.enable = true;
+
+  systemd.user.services.polkit-gnome-authentication-agent-1 = {
+    description = "GNOME polkit authentication agent";
+    wantedBy = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+      Restart = "on-failure";
+    };
+  };
 }

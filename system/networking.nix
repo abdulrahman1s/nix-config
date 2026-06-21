@@ -44,7 +44,14 @@
   };
 
   age = {
-    identityPaths = [ "/home/${username}/.ssh/id_ed25519" ];
+    # Root and home are wiped on every boot (impermanence), so the early-boot
+    # agenix identity lives on the /persist subvolume — mounted neededForBoot=true
+    # in initrd, so it is readable when agenix decrypts (~2.7s, before /home).
+    # The ~/.ssh path (also persisted) stays as a post-mount fallback.
+    identityPaths = [
+      "/persist/root/.ssh/id_ed25519"
+      "/home/${username}/.ssh/id_ed25519"
+    ];
     secrets.nextdns-upstream.file = ../secrets/nextdns-upstream.age;
   };
 

@@ -29,10 +29,20 @@ window-rule {
     }
 }
 
+window-rule {
+    match app-id=r#"^steam$"# title="Steam Settings"
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"^steam$"# title="Friends List"
+    open-floating true
+    default-column-width { fixed 360; }
+    default-window-height { fixed 680; }
+}
 
 window-rule {
     match app-id=r#"^org\.gnome\.Calculator$"#
-    match app-id=r#"^steam$"#
     match app-id=r#"^io\.missioncenter\.MissionCenter$"#
     match title="Picture in picture"
     match app-id=r#"^brave-.*$"# title="_crx_nngceckbapebfimnlniiiahkandclblb" // bitwarden extenstion
@@ -40,6 +50,12 @@ window-rule {
     match app-id=r#"^org\.pulseaudio\.pavucontrol$"#
 
     open-floating true
+}
+
+// Hide the password manager from screen recordings / shares.
+window-rule {
+    match app-id=r#"^brave-.*$"# title="_crx_nngceckbapebfimnlniiiahkandclblb" // bitwarden extension
+    block-out-from "screencast"
 }
 
 window-rule {
@@ -61,6 +77,13 @@ window-rule {
     open-floating true
     default-column-width { proportion 0.5; }
     default-window-height { proportion 0.6; }
+}
+
+window-rule {
+    match title=r#"^(Open|Save|Save As|Open File|Choose File|Select File|File Upload|Preferences|Settings)$"#
+    open-floating true
+    default-column-width { proportion 0.5; }
+    default-window-height { fixed 720; }
 }
 
 // Blur + popup blur for every window. Opacity itself comes from the
@@ -102,6 +125,9 @@ window-rule {
 window-rule {
     geometry-corner-radius 12 // Set every window radius to 20
     clip-to-geometry true
+    // Draw the focus ring as a hollow frame, not a solid fill behind the
+    // window — otherwise the ring color bleeds through transparent backgrounds.
+    draw-border-with-background false
 }
 
 window-rule {

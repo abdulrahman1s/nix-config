@@ -44,15 +44,6 @@
     '';
   };
 
-  hardware.bluetooth = {
-    enable = true;
-    settings = {
-      General = {
-        Experimental = true;
-      };
-    };
-  };
-
   boot.initrd.systemd.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
@@ -87,9 +78,9 @@
     };
 
   fileSystems."/mnt/SN770" = {
-    device = "/dev/disk/by-uuid/2A229E57229E27B9";
-    options = [ "defaults" "x-gvfs-show" "x-gvfs-name=SN770" "uid=1000" "gid=100" "windows_names" "x-systemd.automount" "nofail" "x-systemd.device-timeout=5s" ];
-    fsType = "ntfs-3g";
+    device = "/dev/disk/by-uuid/aa282c6c-483b-4da5-a1ca-2149359cbe7d";
+    options = [ "defaults" "noatime" "nofail" "x-gvfs-show" "x-gvfs-name=SN770" "x-systemd.device-timeout=5s" ];
+    fsType = "ext4";
   };
 
   fileSystems."/mnt/990Pro" = {
@@ -104,10 +95,10 @@
     fsType = "ext4";
   };
 
-  fileSystems."/mnt/Windows" = {
-    device = "/dev/disk/by-uuid/A4A0F3AAA0F3815A";
-    options = [ "defaults" "x-gvfs-show" "x-gvfs-name=Windows" "uid=1000" "gid=100" "windows_names" "x-systemd.automount" "nofail" "x-systemd.device-timeout=5s" ];
-    fsType = "ntfs-3g";
+  fileSystems."/mnt/SN350" = {
+    device = "/dev/disk/by-uuid/104efbfc-be71-4c9a-8d96-e21867fa0b82";
+    options = [ "defaults" "noatime" "nofail" "x-gvfs-show" "x-gvfs-name=SN350" "x-systemd.device-timeout=5s" ];
+    fsType = "ext4";
   };
 
   swapDevices = [ ];

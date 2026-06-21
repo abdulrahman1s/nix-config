@@ -15,9 +15,21 @@ tunnel() {
     2> >(grep -oE 'https://.*trycloudflare\.com')
 }
 
-# Commit with a random message & push
+# Commit with a random message (pick one of five via fzf) & push
 commit() {
-  git commit -m "$(curl -sk https://whatthecommit.com/index.txt)" && git push
+  local -a msgs
+  local i msg choice
+  for i in {1..5}; do
+    msg=$(curl -sk https://whatthecommit.com/index.txt) || continue
+    [[ -n "$msg" ]] && msgs+=("$msg")
+  done
+  if (( ${#msgs} == 0 )); then
+    echo "commit: failed to fetch commit messages" >&2
+    return 1
+  fi
+  choice=$(printf '%s\n' "${msgs[@]}" \
+           | fzf --no-sort --reverse --height=40% --prompt='commit ❯ ') || return
+  git commit -m "$choice" && git push
 }
 
 # Universal archive extractor

@@ -14,9 +14,10 @@ framework or a starter template - just the actual system I use every day, kept
 in a flake so I can rebuild it from scratch.
 
 A lot of it is ordinary NixOS. The parts I actually spent time on are the
-**niri desktop**, the **app sandboxing**, and some **boot / kernel / terminal
-tuning**, so that's mostly what these notes cover. If you run NixOS, there might
-be a couple of ideas worth borrowing.
+**niri desktop**, the **app sandboxing**, an **ephemeral root** that wipes back
+to blank on every boot, and some **boot / kernel / terminal tuning**, so that's
+mostly what these notes cover. If you run NixOS, there might be a couple of ideas
+worth borrowing.
 
 ```text
 Limine ─▶ ly ─▶ niri ─▶ noctalia ─▶ apps, each in its own bubblewrap sandbox
@@ -61,6 +62,38 @@ so Windows keeps working even when an update moves its loader - there's no
 chainload path to maintain. The Windows NTFS volumes also `x-systemd.automount`
 under `/mnt` (with `windows_names` + `nofail`), so I can browse them from NixOS
 when I need to.
+
+## Ephemeral root and home
+
+Both the `root` and `home` btrfs subvolumes are rolled back to an empty snapshot
+on every boot. Nothing survives a reboot unless it's on an explicit keep-list, so
+the machine always comes up in the same clean state and any state that matters is
+something I consciously decided to keep.
+
+[`system/impermanence.nix`](system/impermanence.nix) is two pieces:
+
+- A `rollback` service that runs **in the initrd**, before the real root mounts.
+  It deletes `root` and `home` (and any nested subvolumes) and restores them from
+  pristine `*-blank` snapshots:
+
+  ```nix
+  for sub in root home; do
+    btrfs subvolume delete "/btrfs-tmp/$sub"
+    btrfs subvolume snapshot "/btrfs-tmp/$sub-blank" "/btrfs-tmp/$sub"
+  done
+  ```
+
+- [nix-community/impermanence](https://github.com/nix-community/impermanence)
+  bind-mounts the keep-list back out of a third subvolume, `/persist`, which is
+  never wiped. System state (`/var/lib/nixos` for stable uid/gid maps,
+  NetworkManager connections, Bluetooth pairings, Docker, the journal) and a
+  hand-picked set of `$HOME` paths (the flake repo itself, `~/.ssh`, the browser
+  profile, shell history, app logins) live there.
+
+Two things this buys, both nice: the keep-list *is* the documentation of what
+state the system actually depends on, and because `/persist` is mounted in the
+initrd (`neededForBoot`) the agenix identity at `/persist/root/.ssh/id_ed25519`
+is readable early enough to decrypt secrets before any service wants them.
 
 ## The niri desktop
 

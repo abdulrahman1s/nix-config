@@ -132,19 +132,6 @@
                     "useCustomFont": false
                 },
                 {
-                    "defaultSettings": {
-                        "cursorPosition": 0,
-                        "filePath": "",
-                        "fontSize": 14,
-                        "panelHeight": 400,
-                        "panelWidth": 600,
-                        "scratchpadContent": "",
-                        "scrollPositionX": 0,
-                        "scrollPositionY": 0
-                    },
-                    "id": "plugin:notes-scratchpad"
-                },
-                {
                     "compactMode": false,
                     "hideMode": "hidden",
                     "hideWhenIdle": false,
@@ -181,9 +168,58 @@
                     "textColor": "none",
                     "useMonospaceFont": true,
                     "usePadding": false
+                },
+                {
+                    "defaultSettings": {
+                        "cursorPosition": 0,
+                        "filePath": "",
+                        "fontSize": 14,
+                        "panelHeight": 400,
+                        "panelWidth": 600,
+                        "scratchpadContent": "",
+                        "scrollPositionX": 0,
+                        "scrollPositionY": 0
+                    },
+                    "id": "plugin:notes-scratchpad"
                 }
             ],
             "right": [
+                {
+                    "blacklist": [
+                    ],
+                    "chevronColor": "none",
+                    "colorizeIcons": false,
+                    "drawerEnabled": true,
+                    "hidePassive": false,
+                    "id": "Tray",
+                    "pinned": [
+                        "steam"
+                    ]
+                },
+                {
+                    "displayMode": "forceOpen",
+                    "iconColor": "none",
+                    "id": "KeyboardLayout",
+                    "showIcon": true,
+                    "textColor": "none"
+                },
+                {
+                    "defaultSettings": {
+                        "density": "comfortable",
+                        "maxHistorySize": 100,
+                        "showImagePreviews": true
+                    },
+                    "id": "plugin:clipboard"
+                },
+                {
+                    "deviceNativePath": "__default__",
+                    "displayMode": "graphic-clean",
+                    "hideIfIdle": false,
+                    "hideIfNotDetected": true,
+                    "id": "Battery",
+                    "showNoctaliaPerformance": false,
+                    "showPowerProfiles": false
+                },
                 {
                     "defaultSettings": {
                         "activeColor": "primary",
@@ -206,16 +242,34 @@
                     "id": "plugin:port-monitor"
                 },
                 {
-                    "blacklist": [
-                    ],
-                    "chevronColor": "none",
-                    "colorizeIcons": false,
-                    "drawerEnabled": true,
-                    "hidePassive": false,
-                    "id": "Tray",
-                    "pinned": [
-                        "steam"
-                    ]
+                    "defaultSettings": {
+                        "mode": "region"
+                    },
+                    "id": "plugin:screenshot"
+                },
+                {
+                    "defaultSettings": {
+                        "audioCodec": "opus",
+                        "audioSource": "default_output",
+                        "colorRange": "limited",
+                        "copyToClipboard": false,
+                        "customReplayDuration": "30",
+                        "directory": "",
+                        "filenamePattern": "recording_yyyyMMdd_HHmmss",
+                        "frameRate": "60",
+                        "hideInactive": false,
+                        "iconColor": "none",
+                        "quality": "very_high",
+                        "replayDuration": "30",
+                        "replayEnabled": false,
+                        "replayStorage": "ram",
+                        "resolution": "original",
+                        "restorePortalSession": false,
+                        "showCursor": true,
+                        "videoCodec": "h264",
+                        "videoSource": "portal"
+                    },
+                    "id": "plugin:screen-recorder"
                 },
                 {
                     "defaultSettings": {
@@ -237,36 +291,6 @@
                     "id": "plugin:screen-toolkit"
                 },
                 {
-                    "defaultSettings": {
-                        "density": "comfortable",
-                        "maxHistorySize": 100,
-                        "showImagePreviews": true
-                    },
-                    "id": "plugin:clipboard"
-                },
-                {
-                    "defaultSettings": {
-                        "mode": "region"
-                    },
-                    "id": "plugin:screenshot"
-                },
-                {
-                    "displayMode": "forceOpen",
-                    "iconColor": "none",
-                    "id": "KeyboardLayout",
-                    "showIcon": true,
-                    "textColor": "none"
-                },
-                {
-                    "deviceNativePath": "__default__",
-                    "displayMode": "graphic-clean",
-                    "hideIfIdle": false,
-                    "hideIfNotDetected": true,
-                    "id": "Battery",
-                    "showNoctaliaPerformance": false,
-                    "showPowerProfiles": false
-                },
-                {
                     "displayMode": "onhover",
                     "iconColor": "none",
                     "id": "Volume",
@@ -282,39 +306,6 @@
                     "icon": "noctalia",
                     "id": "ControlCenter",
                     "useDistroLogo": false
-                },
-                {
-                    "defaultSettings": {
-                        "applyWallpaperColorsOnApply": false,
-                        "assetsDir": "",
-                        "autoApplyOnStartup": true,
-                        "defaultAudioReactiveEffects": true,
-                        "defaultClamp": "clamp",
-                        "defaultDisableMouse": false,
-                        "defaultDisableParallax": false,
-                        "defaultFps": 30,
-                        "defaultFullscreenPauseOnlyActive": false,
-                        "defaultMuted": true,
-                        "defaultNoAutomute": false,
-                        "defaultNoFullscreenPause": false,
-                        "defaultScaling": "fill",
-                        "defaultVolume": 100,
-                        "enableExtraPropertiesEditor": true,
-                        "iconColor": "none",
-                        "lastKnownGoodScreens": {
-                        },
-                        "panelLastSelectedPath": "",
-                        "runtimeRecoveryPending": false,
-                        "screens": {
-                        },
-                        "wallpaperColorScreenshots": {
-                        },
-                        "wallpaperProperties": {
-                        },
-                        "wallpaperScanCacheMinutes": 5,
-                        "wallpapersFolder": "~/.local/share/Steam/steamapps/workshop/content/431960"
-                    },
-                    "id": "plugin:linux-wallpaperengine-controller"
                 }
             ]
         }
@@ -578,7 +569,7 @@
         "weatherTaliaMascotAlways": false
     },
     "network": {
-        "bluetoothAutoConnect": true,
+        "bluetoothAutoConnect": false,
         "bluetoothDetailsViewMode": "grid",
         "bluetoothHideUnnamedDevices": false,
         "bluetoothRssiPollIntervalMs": 60000,
