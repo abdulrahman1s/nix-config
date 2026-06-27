@@ -124,6 +124,7 @@ in
 
         ".pki" # NSS cert db (client certs)
         "best-minecraft-ever"
+        ".config/ghfs"
         # ── Desktop/app state the first wipe destroyed; recovered from the
         #    pre-wipe backup snapshot into /persist. Each line notes what broke.
         ".config/dconf" # GTK/GNOME settings — theme, fonts, dark mode (without it nautilus renders light/unreadable)

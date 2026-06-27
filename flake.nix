@@ -39,7 +39,9 @@
     };
 
     noctalia = {
-      url = "github:noctalia-dev/noctalia-shell";
+      # Pinned to last v4 (pre-5.0.0 rewrite): v5 dropped the JSON config + plugin
+      # model we rely on. Unpin when v5 reaches plugin parity. See AGENTS.md gotchas.
+      url = "github:noctalia-dev/noctalia-shell/6b48834dd6c3913d211476ab2f964f3fb100675e";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

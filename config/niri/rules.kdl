@@ -188,3 +188,13 @@ layer-rule {
     match namespace="^noctalia-overview*"
     place-within-backdrop true
 }
+
+// Live wallpaper (linux-wallpaperengine) is forced onto the wlr *background*
+// layer via `--layer background` (wrapped in system/graphics.nix). Fold it into
+// niri's backdrop so xray-blurred transparent windows sample it; without this it
+// also gets cloned into every overview workspace card. Upstream changed the
+// default layer to BOTTOM in PR #528, which is what broke transparency here.
+layer-rule {
+    match namespace="^linux-wallpaperengine$"
+    place-within-backdrop true
+}
