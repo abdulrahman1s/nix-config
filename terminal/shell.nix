@@ -1,6 +1,10 @@
-{ pkgs, username, ... }:
+{ lib, pkgs, username, ... }:
 
-let home = "/home/${username}"; in
+let
+  home = "/home/${username}";
+  ghfsMountPath = "${home}/Github";
+  ghfsMountArg = lib.escapeShellArg ghfsMountPath;
+in
 {
   users.defaultUserShell = pkgs.zsh;
 
@@ -33,11 +37,24 @@ let home = "/home/${username}"; in
     };
   };
 
+  programs.atuin = {
+    enable = true;
+    flags = [
+      "--disable-ai"
+      "--disable-up-arrow"
+    ];
+    settings = {
+      update_check = false;
+      keymap_mode = "auto";
+      enter_accept = false;
+    };
+  };
+
   programs.github-fs = {
     enable = true;
     autoMount = {
       enable = true;
-      mountPath = "/home/${username}/Github";
+      mountPath = ghfsMountPath;
       extraArgs = [
         "--log-level"
         "info"
@@ -51,6 +68,13 @@ let home = "/home/${username}"; in
     };
   };
 
+  systemd.user.services.ghfs.serviceConfig = {
+    ExecStartPre = lib.mkForce [
+      "-/run/wrappers/bin/fusermount3 -uz ${ghfsMountArg}"
+      "${pkgs.coreutils}/bin/mkdir -p ${ghfsMountArg}"
+    ];
+    ExecStop = lib.mkForce "/run/wrappers/bin/fusermount3 -uz ${ghfsMountArg}";
+  };
 
   # ~/.local/bin on PATH for all users
   environment.localBinInPath = true;
@@ -166,7 +190,6 @@ let home = "/home/${username}"; in
       source ${pkgs.zsh-vi-mode}/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh
 
       # ── fzf key bindings ─────────────────────────────────
-      #   Ctrl-R   fuzzy history search
       #   Ctrl-T   fuzzy file picker → inserts the path at the cursor
       #   Alt-C    fuzzy directory picker → cd into it
       source ${pkgs.fzf}/share/fzf/key-bindings.zsh
@@ -186,11 +209,13 @@ let home = "/home/${username}"; in
       source ${pkgs.zsh-history-substring-search}/share/zsh-history-substring-search/zsh-history-substring-search.zsh
 
       # zsh-vi-mode rebuilds viins/vicmd keymaps on first prompt, wiping every
-      # bindkey set before it (including fzf's Ctrl-R / Ctrl-T / Alt-C and the
-      # history-substring-search arrow keys). Re-install everything here.
+      # bindkey set before it. Re-install custom bindings here.
       function zvm_after_init() {
         # Re-source fzf so its widgets get re-bound in the fresh keymap.
         source ${pkgs.fzf}/share/fzf/key-bindings.zsh
+        bindkey -M emacs '^R' atuin-search
+        bindkey -M viins '^R' atuin-search
+        bindkey -M vicmd '^R' atuin-search
 
         # history-substring-search: bind BOTH escape sequences for ↑/↓.
         # CSI form (^[[A/B) is sent in normal mode; SS3 form (^[OA/B) is sent

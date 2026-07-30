@@ -8,7 +8,7 @@ in
   age.secrets.cloudflare-tunnel-token.file = ../secrets/cloudflare-tunnel-token.age;
 
   # ── Cloudflare WARP ────────────────────────────────────────
-  services.cloudflare-warp.enable = false;
+  services.cloudflare-warp.enable = true;
 
   users.users.cloudflared = {
     group = "cloudflared";

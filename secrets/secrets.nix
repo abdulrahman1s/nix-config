@@ -9,4 +9,6 @@ in
   "juicefs-rsa-key.pem.age".publicKeys = [ abdulrahman ];
   "nextdns-upstream.age".publicKeys = [ abdulrahman ];
   "rclone.conf.age".publicKeys = [ abdulrahman ];
+  "user-password-hash.age".publicKeys = [ abdulrahman ];
+  "root-password-hash.age".publicKeys = [ abdulrahman ];
 }

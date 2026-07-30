@@ -8,7 +8,6 @@
     # ── Terminal & Shell ───────────────────────────────────
     eza # Modern replacement for 'ls'
     fastfetch # Prints system info and logo to the terminal
-    foot # Lightweight Wayland terminal emulator
     ghostty # Fast, modern terminal emulator
     pure-prompt # Minimal, fast Zsh prompt
     zoxide # Smarter 'cd' command that learns your habits
@@ -39,11 +38,12 @@
     # ── Development ────────────────────────────────────────
     binutils # Essential tools for compiled binaries (ld, objdump, strings)
     gh # Official GitHub CLI
+    jq # JSON processor used by niri helper scripts
     jnv # Interactive JSON filter using jq
     inputs.agenix.packages.${pkgs.stdenv.hostPlatform.system}.default # Edits age-encrypted secrets
 
     # ── Media ──────────────────────────────────────────────
-    ffmpeg-full # Swiss army knife for converting audio and video
+    ffmpeg-headless # CLI transcoding without ffmpeg-full's duplicate desktop stack
     yt-dlp # Downloads videos from YouTube and other sites
 
     # ── System Utilities ───────────────────────────────────
@@ -69,5 +69,7 @@
 
     witr # Command-line tool to find out why processes are running
     vhs # Terminal-recording
+
+    libnotify
   ];
 }

@@ -1,44 +1,89 @@
 #!/usr/bin/env python3
-"""Remote control HTTP server for NixOS + Niri.
+"""Remote control HTTPS server for NixOS + Niri.
 
 Endpoints:
   GET  /ping        — health check
-  GET  /unlock      — unlock all sessions and wake monitors
-  GET  /lock        — lock all sessions
   GET  /status      — show session lock state
   GET  /clipboard   — read clipboard
+  GET  /screenshot  — capture focused screen and return PNG
+  POST /lock        — lock all sessions
+  POST /unlock      — unlock all sessions and wake monitors
   POST /clipboard   — set clipboard (send text as raw body)
-  GET  /screenshot  — capture focused screen via niri and return PNG
-  GET  /shutdown    — power off
-  GET  /reboot      — reboot
+  POST /shutdown    — power off
+  POST /reboot      — reboot
 
 Auth: Bearer token via Authorization header.
-Token is read from @tokenPath@ (auto-generated on first boot).
+The token is supplied through systemd credentials.
 """
 
 import http.server
-import socketserver
-import subprocess
-import json
 import hmac
+import json
 import pwd
 import os
+import socketserver
+import ssl
+import subprocess
+import tempfile
+import threading
 from pathlib import Path
 from urllib.parse import urlparse
 
-class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    daemon_threads = True
+MAX_BODY_BYTES = 1024 * 1024
+REQUEST_TIMEOUT_SECONDS = 15
+MAX_REQUEST_THREADS = 16
 
-TOKEN   = Path("@tokenPath@").read_text().strip()
-PORT    = 8901
-WLCOPY  = "@wlClipboard@/bin/wl-copy"
+
+class BoundedThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    request_queue_size = MAX_REQUEST_THREADS
+
+    def __init__(self, *args, tls_context, **kwargs):
+        self._tls_context = tls_context
+        self._request_slots = threading.BoundedSemaphore(MAX_REQUEST_THREADS)
+        super().__init__(*args, **kwargs)
+
+    def get_request(self):
+        connection, address = super().get_request()
+        connection.settimeout(REQUEST_TIMEOUT_SECONDS)
+        try:
+            return self._tls_context.wrap_socket(
+                connection,
+                server_side=True,
+            ), address
+        except BaseException:
+            connection.close()
+            raise
+
+    def process_request(self, request, client_address):
+        self._request_slots.acquire()
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._request_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._request_slots.release()
+
+
+TOKEN = Path(os.environ["CREDENTIALS_DIRECTORY"], "token").read_text().strip()
+if not TOKEN:
+    raise RuntimeError("remote-control token is empty")
+
+PORT = 8901
+WLCOPY = "@wlClipboard@/bin/wl-copy"
 WLPASTE = "@wlClipboard@/bin/wl-paste"
-NIRI    = "@niri@/bin/niri"
-NOCTALIA = "@noctaliaShell@/bin/noctalia-shell"
+NIRI = "@niri@/bin/niri"
+NOCTALIA = "@noctalia@/bin/noctalia"
+
 
 def _wayland_env():
     """Build env dict to talk to the user's Wayland/Niri session."""
-    pw  = pwd.getpwnam("@username@")
+    pw = pwd.getpwnam("@username@")
     uid = pw.pw_uid
     runtime_dir = f"/run/user/{uid}"
 
@@ -67,12 +112,18 @@ def _wayland_env():
         env["NIRI_SOCKET"] = niri_socket
     return env, uid, pw.pw_gid
 
+
 class Handler(http.server.BaseHTTPRequestHandler):
 
     # ── helpers ──────────────────────────────────────
 
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(REQUEST_TIMEOUT_SECONDS)
+
     def _check_auth(self):
-        if not hmac.compare_digest(self.headers.get("Authorization", ""), TOKEN):
+        expected = f"Bearer {TOKEN}"
+        if not hmac.compare_digest(self.headers.get("Authorization", ""), expected):
             self._json(401, {"error": "unauthorized"})
             return False
         return True
@@ -82,6 +133,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(body)
 
@@ -89,12 +142,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(data)
 
     def _run(self, cmd, env=None, uid=None, gid=None):
-        r = subprocess.run(cmd, capture_output=True, text=True,
-                           env=env, user=uid, group=gid)
+        try:
+            r = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                env=env,
+                user=uid,
+                group=gid,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            return False, "command timed out"
         return r.returncode == 0, r.stderr.strip()
 
     def _run_action(self, cmd, ok_status, env=None, uid=None, gid=None):
@@ -111,8 +176,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not self._check_auth():
             return
         path = urlparse(self.path).path
-        if   path == "/clipboard": self._post_clipboard()
-        else:                      self._json(404, {"error": "not found"})
+        routes = {
+            "/clipboard": self._post_clipboard,
+            "/lock": self._post_lock,
+            "/unlock": self._post_unlock,
+            "/shutdown": self._post_shutdown,
+            "/reboot": self._post_reboot,
+        }
+        handler = routes.get(path)
+        if handler:
+            handler()
+        else:
+            self._json(404, {"error": "not found"})
 
     def do_GET(self):
         if not self._check_auth():
@@ -121,10 +196,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "/ping":       self._get_ping,
             "/status":     self._get_status,
             "/clipboard":  self._get_clipboard,
-            "/lock":       self._get_lock,
-            "/unlock":     self._get_unlock,
-            "/shutdown":   self._get_shutdown,
-            "/reboot":     self._get_reboot,
             "/screenshot": self._get_screenshot,
         }
         handler = routes.get(urlparse(self.path).path)
@@ -137,19 +208,33 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self._json(200, {"status": "ok"})
 
     def _get_status(self):
-        r = subprocess.run(["loginctl", "list-sessions", "--no-legend"],
-                           capture_output=True, text=True)
+        try:
+            r = subprocess.run(
+                ["loginctl", "list-sessions", "--no-legend"],
+                capture_output=True,
+                text=True,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            self._json(504, {"error": "loginctl timed out"})
+            return
         sessions = []
         for line in r.stdout.strip().splitlines():
             parts = line.split()
             if not parts:
                 continue
             sid = parts[0]
-            props = subprocess.run(
-                ["loginctl", "show-session", sid,
-                 "-p", "LockedHint", "-p", "Name", "-p", "Type"],
-                capture_output=True, text=True,
-            )
+            try:
+                props = subprocess.run(
+                    ["loginctl", "show-session", sid,
+                     "-p", "LockedHint", "-p", "Name", "-p", "Type"],
+                    capture_output=True,
+                    text=True,
+                    timeout=REQUEST_TIMEOUT_SECONDS,
+                )
+            except subprocess.TimeoutExpired:
+                self._json(504, {"error": "loginctl timed out"})
+                return
             pmap = {}
             for pline in props.stdout.strip().splitlines():
                 if "=" in pline:
@@ -166,85 +251,142 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def _get_clipboard(self):
         env, uid, gid = _wayland_env()
-        r = subprocess.run([WLPASTE], env=env, user=uid, group=gid,
-                           capture_output=True, text=True)
+        try:
+            r = subprocess.run(
+                [WLPASTE],
+                env=env,
+                user=uid,
+                group=gid,
+                capture_output=True,
+                text=True,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            self._json(504, {"error": "clipboard read timed out"})
+            return
         if r.returncode == 0:
             self._json(200, {"text": r.stdout})
         else:
             self._json(500, {"status": "error", "detail": r.stderr.strip()})
 
-    def _get_lock(self):
-        env, uid, gid = _wayland_env()
-        self._run_action(
-            [NOCTALIA, "ipc", "call", "lockScreen", "lock"],
-            "locked", env=env, uid=uid, gid=gid)
-
-    def _get_unlock(self):
-        env, uid, gid = _wayland_env()
-        ok, err = self._run(
-            [NOCTALIA, "ipc", "call", "lockScreen", "unlock"],
-            env=env, uid=uid, gid=gid)
-        # Wake monitors from DPMS sleep via niri
-        subprocess.run(
-            [NIRI, "msg", "action", "power-on-monitors"],
-            env=env, user=uid, group=gid,
-            capture_output=True, text=True,
-        )
-        self._json(200 if ok else 500, {
-            "status": "unlocked" if ok else "error",
-            **({"detail": err} if not ok else {}),
-        })
-
-    def _get_shutdown(self):
-        self._run_action(["systemctl", "poweroff"], "shutting down")
-
-    def _get_reboot(self):
-        self._run_action(["systemctl", "reboot"], "rebooting")
-
     def _get_screenshot(self):
         env, uid, gid = _wayland_env()
-        tmp_path = f"/tmp/remote-control-screenshot-{os.getpid()}.png"
-        r = subprocess.run(
-            [NIRI, "msg", "action", "screenshot-screen", "--path", tmp_path],
-            env=env, user=uid, group=gid,
-            capture_output=True, text=True,
-        )
-        if r.returncode != 0:
-            self._json(500, {"status": "error",
-                             "detail": f"niri screenshot failed: {r.stderr.strip()}"})
-            return
-
-        try:
-            self._binary(200, "image/png", Path(tmp_path).read_bytes())
-        finally:
-            try:    os.unlink(tmp_path)
-            except OSError: pass
+        with tempfile.TemporaryDirectory(
+            prefix="screenshot-",
+            dir="@runtimeDirectoryPath@",
+        ) as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, "screenshot.png")
+            try:
+                r = subprocess.run(
+                    [NIRI, "msg", "action", "screenshot-screen", "--path", tmp_path],
+                    env=env,
+                    user=uid,
+                    group=gid,
+                    capture_output=True,
+                    text=True,
+                    timeout=REQUEST_TIMEOUT_SECONDS,
+                )
+            except subprocess.TimeoutExpired:
+                self._json(504, {"error": "screenshot timed out"})
+                return
+            if r.returncode != 0:
+                self._json(500, {
+                    "status": "error",
+                    "detail": f"niri screenshot failed: {r.stderr.strip()}",
+                })
+                return
+            try:
+                screenshot = Path(tmp_path).read_bytes()
+            except OSError as error:
+                self._json(500, {
+                    "status": "error",
+                    "detail": f"could not read screenshot: {error}",
+                })
+                return
+            self._binary(200, "image/png", screenshot)
 
     # ── POST handlers ────────────────────────────────
 
     def _post_clipboard(self):
-        length = int(self.headers.get("Content-Length", 0))
-        text = self.rfile.read(length).decode("utf-8") if length else ""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            self._json(400, {"error": "invalid Content-Length"})
+            return
+        if length <= 0:
+            self._json(400, {"error": "empty body"})
+            return
+        if length > MAX_BODY_BYTES:
+            self._json(413, {"error": "body exceeds 1 MiB"})
+            return
+        try:
+            text = self.rfile.read(length).decode("utf-8") if length else ""
+        except UnicodeDecodeError:
+            self._json(400, {"error": "body must be UTF-8"})
+            return
         if not text:
             self._json(400, {"error": "empty body"})
             return
         env, uid, gid = _wayland_env()
         # wl-copy forks a daemon that never exits — send to DEVNULL
-        r = subprocess.run(
-            [WLCOPY, "--", text], env=env, user=uid, group=gid,
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, start_new_session=True,
-        )
+        try:
+            r = subprocess.run(
+                [WLCOPY, "--", text], env=env, user=uid, group=gid,
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, start_new_session=True,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            self._json(504, {"error": "clipboard write timed out"})
+            return
         if r.returncode == 0:
             self._json(200, {"status": "copied", "length": len(text)})
         else:
             self._json(500, {"status": "error",
                              "detail": f"wl-copy exited {r.returncode}"})
 
+    def _post_lock(self):
+        env, uid, gid = _wayland_env()
+        self._run_action(
+            [NOCTALIA, "msg", "session", "lock"],
+            "locked", env=env, uid=uid, gid=gid)
+
+    def _post_unlock(self):
+        env, uid, gid = _wayland_env()
+        ok, err = self._run(
+            ["loginctl", "unlock-sessions"],
+            env=env, uid=uid, gid=gid)
+        wake_ok, wake_err = self._run(
+            [NIRI, "msg", "action", "power-on-monitors"],
+            env=env,
+            uid=uid,
+            gid=gid,
+        )
+        success = ok and wake_ok
+        self._json(200 if success else 500, {
+            "status": "unlocked" if success else "error",
+            **({"detail": err or wake_err} if not success else {}),
+        })
+
+    def _post_shutdown(self):
+        self._run_action(["systemctl", "poweroff"], "shutting down")
+
+    def _post_reboot(self):
+        self._run_action(["systemctl", "reboot"], "rebooting")
+
     def log_message(self, fmt, *args):
         print(f"{args[0]} {args[1]} {args[2]}")
 
+
 if __name__ == "__main__":
-    srv = ThreadingHTTPServer(("@lanAddress@", PORT), Handler)
-    print(f"remote-control listening on @lanAddress@:{PORT}")
+    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls.minimum_version = ssl.TLSVersion.TLSv1_2
+    tls.load_cert_chain("@certificatePath@", "@privateKeyPath@")
+
+    srv = BoundedThreadingHTTPServer(
+        ("@lanAddress@", PORT),
+        Handler,
+        tls_context=tls,
+    )
+    print(f"remote-control listening on https://@lanAddress@:{PORT}")
     srv.serve_forever()

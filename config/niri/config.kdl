@@ -1,17 +1,19 @@
 prefer-no-csd
 
 spawn-at-startup "dbus-update-activation-environment" "--systemd" "--all"
-spawn-at-startup "noctalia-shell"
+spawn-at-startup "noctalia"
+spawn-at-startup "sh" "-c" "exec sh \"$HOME/.config/niri/start-wallpaperengine\""
 spawn-at-startup "vicinae" "server"
 spawn-at-startup "nautilus" "--gapplication-service"
 spawn-at-startup "waycorner"
+spawn-at-startup "handy" "--start-hidden"
 
 workspace "main" {
-    open-on-output "DP-3"
+    open-on-output "DP-2"
 }
 
 workspace "dev" {
-    open-on-output "DP-3"
+    open-on-output "DP-2"
 }
 
 output "HDMI-A-1" {
@@ -19,7 +21,7 @@ output "HDMI-A-1" {
     scale 1.3
 }
 
-output "DP-3" {
+output "DP-2" {
     mode "3840x2160@239.991"
     focus-at-startup
     scale 2.0
@@ -38,6 +40,10 @@ environment {
 
 hotkey-overlay {
    skip-at-startup
+}
+
+debug {
+    honor-xdg-activation-with-invalid-serial
 }
 
 screenshot-path "~/Pictures/Screenshots from %Y-%m-%d %H-%M-%S.png"

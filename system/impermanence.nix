@@ -2,9 +2,49 @@
 # on every boot; only the paths below survive. Bootstrap (create the `persist`,
 # `root-blank`, `home-blank` subvolumes) and the one-time data migration into
 # /persist are manual steps — see the project plan before the first switch.
-{ username, ... }:
+{ lib, config, utils, username, ... }:
 let
+  inherit (lib) concatStringsSep listToAttrs nameValuePair optionals;
+
   device = "/dev/disk/by-uuid/ddb4bdb8-c522-4420-ba2d-ace00fc2054b";
+  persistRoot = "/persist";
+  persistMount = "persist.mount";
+  persistCfg = config.environment.persistence.${persistRoot};
+
+  mountOptions = { hideMount, allowTrash, ... }:
+    concatStringsSep "," ([
+      "bind"
+    ] ++ optionals hideMount [
+      "x-gvfs-hide"
+    ] ++ optionals allowTrash [
+      "x-gvfs-trash"
+    ]);
+
+  mkPersistMount = { dirPath, persistentStoragePath, ... }@dir: {
+    wantedBy = [ "local-fs.target" ];
+    before = [ "local-fs.target" ];
+    requires = [ persistMount ];
+    after = [ persistMount ];
+    where = dirPath;
+    what = "${persistentStoragePath}${dirPath}";
+    unitConfig.DefaultDependencies = false;
+    type = "none";
+    options = mountOptions dir;
+  };
+
+  mkPersistFileService = { filePath, persistentStoragePath, ... }:
+    nameValuePair "persist-${utils.escapeSystemdPath "${persistentStoragePath}${filePath}"}" {
+      requires = [ persistMount ];
+      after = [ persistMount ];
+    };
+
+  persistedDirectories =
+    persistCfg.directories
+    ++ persistCfg.users.${username}.directories;
+
+  persistedFiles =
+    persistCfg.files
+    ++ persistCfg.users.${username}.files;
 in
 {
   fileSystems."/persist" = {
@@ -45,6 +85,10 @@ in
     '';
   };
 
+  systemd.mounts = lib.mkBefore (map mkPersistMount persistedDirectories);
+
+  systemd.services = listToAttrs (map mkPersistFileService persistedFiles);
+
   environment.persistence."/persist" = {
     hideMounts = true;
 
@@ -62,12 +106,14 @@ in
       "/var/lib/dokploy"
       "/var/lib/containers"
       "/var/lib/libvirt"
+      "/var/lib/minepanel" # panel database, Minecraft servers, worlds, and backups
       # Sandboxed Brave private profile (host path)
       "/var/lib/brave-private"
       # Flake-defined service state
       "/var/lib/juicefs" # SQLite metadata db (services/juicefs.nix)
       "/var/cache/juicefs" # cache (rebuildable but large)
       "/var/lib/liquidsoap" # services/radio.nix StateDirectory
+      "/var/lib/remote-control" # LAN HTTPS certificate and private key
       # Journal
       "/var/log"
     ];
@@ -93,6 +139,7 @@ in
         "projects"
         ".anydesk"
         ".config/BraveSoftware" # browser profile (logins, cookies, history)
+        ".local/share/atuin"
         ".local/share/zoxide"
         ".local/state/ghostty"
         ".slim" # services/slim.nix ReadWritePaths
@@ -120,16 +167,20 @@ in
         ".cache/nvidia" # NVIDIA GLCache (compiled GPU shaders); without it every boot recompiles shaders → first-launch stutter in games/GPU apps on the RTX 5090. Self-invalidates on driver bumps.
         ".cache/fontconfig" # per-user fontconfig cache; skips the fc-cache font rescan that hangs the first font-heavy GUI app for seconds after a wipe. Re-keyed (partially regenerated) when a rebuild changes the font set, but valid across plain reboots.
         ".cache/cliphist" # clipboard history db
-
+        ".local/share/com.pais.handy"
+        ".sklauncher"
 
         ".pki" # NSS cert db (client certs)
         "best-minecraft-ever"
+        ".minecraft"
         ".config/ghfs"
         # ── Desktop/app state the first wipe destroyed; recovered from the
         #    pre-wipe backup snapshot into /persist. Each line notes what broke.
         ".config/dconf" # GTK/GNOME settings — theme, fonts, dark mode (without it nautilus renders light/unreadable)
-        ".config/noctalia" # shell: installed plugins + colorschemes (settings/colors/plugins.json stay repo-symlinked via dotfiles.nix)
-        ".cache/noctalia" # shell state: current wallpaper, dynamic theming, clipboard history
+        ".config/noctalia" # shell: declarative v5 config/palettes plus any hand-installed local config
+        ".local/state/noctalia" # shell: GUI overrides, plugin source caches, runtime state
+        ".local/share/noctalia" # shell: local v5 plugins
+        ".cache/noctalia"
         ".local/share/keyrings" # gnome-keyring secrets — VSCode safe-storage + Brave cookie/login encryption
         ".icons" # icon + cursor themes (McMojave-circle, We10XOS-cursors) referenced by gtk settings.ini
         ".local/share/icons" # additional icon themes (Tela, We10X, …)
@@ -156,4 +207,17 @@ in
       ];
     };
   };
+
+  system.userActivationScripts.minecraft-backups.text = ''
+    backup_link="$HOME/minecraft-backups"
+    backup_target="/var/lib/minepanel/servers/minecraft/backups"
+
+    if [ -L "$backup_link" ]; then
+      ln -sfn "$backup_target" "$backup_link"
+    elif [ -e "$backup_link" ]; then
+      echo "Not replacing existing $backup_link" >&2
+    else
+      ln -s "$backup_target" "$backup_link"
+    fi
+  '';
 }

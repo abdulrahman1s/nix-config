@@ -33,6 +33,7 @@ in
     # any path they share (e.g. gtk-{3,4}.0/gtk.css).
     ${linkAll themePath}
     ${linkAll "/home/${username}/system-conf/config"}
+    rm -rf "$HOME/.config/noctalia/plugins/linux-wallpaperengine-controller"
     echo "── Done Symlinking files ──"
   '';
 }

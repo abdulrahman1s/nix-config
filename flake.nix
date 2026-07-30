@@ -4,10 +4,11 @@
   nixConfig = {
     extra-substituters = [
       "https://nixos-cache-proxy.cofob.dev"
+      "https://cache.nixos.org" # fallback when the Cloudflare proxy is unavailable
       "https://cache.nixos-cuda.org"
       "https://attic.xuyh0120.win/lantian" # primary cache for nix-cachyos-kernel
       "https://cache.garnix.io" # fallback cache for nix-cachyos-kernel
-      "https://noctalia.cachix.org" # pre-built noctalia-shell / quickshell
+      "https://noctalia.cachix.org" # pre-built Noctalia v5
     ];
     extra-trusted-public-keys = [
       "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
@@ -39,10 +40,7 @@
     };
 
     noctalia = {
-      # Pinned to last v4 (pre-5.0.0 rewrite): v5 dropped the JSON config + plugin
-      # model we rely on. Unpin when v5 reaches plugin parity. See AGENTS.md gotchas.
-      url = "github:noctalia-dev/noctalia-shell/6b48834dd6c3913d211476ab2f964f3fb100675e";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:noctalia-dev/noctalia/v5.0.0-beta.3";
     };
 
     nix-dokploy.url = "github:el-kurto/nix-dokploy";
@@ -51,8 +49,12 @@
     qsh.url = "github:abdulrahman1s/qsh";
     qsh.inputs.nixpkgs.follows = "nixpkgs";
 
+    steam-cleaner.url = "github:abdulrahman1s/steam-cleaner";
+    steam-cleaner.inputs.nixpkgs.follows = "nixpkgs";
+
     github-fs.url = "github:abdulrahman1s/github-fs";
     github-fs.inputs.nixpkgs.follows = "nixpkgs";
+
 
     juicefs-nix.url = "github:abdulrahman1s/juicefs-nix";
     juicefs-nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -61,7 +63,7 @@
     impermanence.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, agenix, nixpak, nixos-hardware, nix-cachyos-kernel, noctalia, brave-previews, nix-dokploy, github-fs, qsh, juicefs-nix, impermanence, ... } @ inputs:
+  outputs = { self, nixpkgs, agenix, nixpak, nixos-hardware, nix-cachyos-kernel, noctalia, brave-previews, nix-dokploy, github-fs, qsh, steam-cleaner, juicefs-nix, impermanence, ... } @ inputs:
     let
       system = "x86_64-linux";
       userArgs = import ./specialArgs.nix;
@@ -76,6 +78,7 @@
           brave-previews.nixosModules.default
           nix-dokploy.nixosModules.default
           qsh.nixosModules.default
+          steam-cleaner.nixosModules.default
           github-fs.nixosModules.default
           juicefs-nix.nixosModules.default
           impermanence.nixosModules.impermanence
@@ -87,7 +90,12 @@
         ];
       };
 
-      checks.${system}.pathbinding =
-        import ./sandboxed-apps/test-pathbinding.nix { inherit pkgs nixpak; };
+      formatter.${system} = pkgs.nixpkgs-fmt;
+
+      checks.${system} = {
+        nixos = self.nixosConfigurations.default.config.system.build.toplevel;
+        pathbinding =
+          import ./sandboxed-apps/test-pathbinding.nix { inherit pkgs nixpak; };
+      };
     };
 }

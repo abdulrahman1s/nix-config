@@ -1,184 +1,262 @@
 # AGENTS.md
 
-A NixOS flake managing the entire personal system for a single user
-(`abdulrahman`, hostname `nixos`). Entry point: `configuration.nix`.
-Flake inputs and substituters in `flake.nix`. This file is symlinked to
-`CLAUDE.md` so any agent that reads either path sees the same source.
+Personal NixOS flake for one daily-driver machine:
 
-## What kind of project this is
+- User: `abdulrahman`
+- Hostname: `nixos`
+- Entry point: `configuration.nix`
+- `CLAUDE.md` is a symlink; edit this file as the source of truth
+- No home-manager; user configuration is managed by NixOS modules
 
-- **Personal daily-driver.** Not a library; not multi-user. Optimize for this user's workflow, not hypothetical others.
-- **Sandboxed by default** for anything GUI — via NixPak's `mkSandboxed` in `sandboxed-apps/nixpak/`. New native packages on `users.users.${username}.packages` should have a clear reason for _not_ being sandboxed.
-- **Declarative over stateful.** Configuration lives in `.nix` files; mutable state outside the flake is tolerated only as an escape hatch.
-- **Explicit over magic.** The user prefers a literal three-line repetition to a clever abstraction. Don't over-factor.
-- **No home-manager.** User-level config rides on `users.users.${username}` or `system.userActivationScripts`.
+## Start Here
+
+1. Read `/home/abdulrahman/.codex/RTK.md`; prefix every shell command with `rtk`.
+2. Check the worktree before editing: `rtk git status --short`.
+3. Treat existing modifications as user-owned. Do not revert, overwrite, or stage unrelated changes.
+4. On a cold-start investigation, read the project memory index described below.
+5. Prefer `rg` and `rg --files` for search.
+6. Follow `configuration.nix` imports top to bottom when locating settings.
+7. Do not run activation commands unless the user explicitly asks.
+8. If the flake imports a new file, stage that file before evaluation or Nix will not see it.
+
+New flake-visible files need:
+
+```bash
+rtk git add path/to/new-file.nix
+```
+
+Stage only newly created paths required by the evaluation. Tracked-file edits do not
+need staging for `nix build`.
+
+## Project Rules
+
+- This is a daily-driver config, not a reusable module library. Optimize for this user.
+- Keep configuration declarative in `.nix` files. Mutable state is only an escape hatch.
+- Prefer explicit repetition over clever abstractions.
+- Do not hardcode `abdulrahman` in Nix modules. Use `${username}` from
+  `specialArgs.nix`; scripts should use `$HOME` or Nix-interpolated paths derived
+  from `${username}`.
+- User config belongs in `users.users.${username}` or `system.userActivationScripts`.
+- Comments should explain non-obvious why, not restate what code does.
+- Do not add backwards-compatibility shims. Change the personal config directly.
+
+## Activation Rule
+
+The user has:
+
+```bash
+rebuild='sudo nixos-rebuild switch --flake /home/abdulrahman/system-conf#default'
+```
+
+Never run `rebuild`, `nixos-rebuild switch`, `nixos-rebuild boot`, or any other activation command without explicit user permission. A successful build is not permission to activate.
 
 ## Validation
 
-None of these change the running system. Run them before suggesting activation.
+Match validation to the change. Documentation-only edits need a scoped
+`git diff --check`; configuration changes need the smallest relevant check
+followed by the whole-system build.
 
 ```bash
-# Parse one .nix file (syntax only)
-nix-instantiate --parse <file>.nix
-
-# Whole-system eval + build, no switch
-nix build .#nixosConfigurations.default.config.system.build.toplevel --no-link
-
-# Pre-flight diff: build pending closure, then nvd diff
-nix build .#nixosConfigurations.default.config.system.build.toplevel --out-link /tmp/nixos-pending
-nvd diff /run/current-system /tmp/nixos-pending
-
-# Zsh syntax
-zsh -n config/zsh/<file>.zsh
-
-# Resolve an option (useful when it falls through to upstream defaults)
-nix eval --json .#nixosConfigurations.default.config.<option.path> | jq
+rtk git diff --check -- path/to/changed-file
+rtk nix-instantiate --parse file.nix
+rtk zsh -n config/zsh/file.zsh
+rtk nix build .#checks.x86_64-linux.pathbinding
+rtk nix build .#nixosConfigurations.default.config.system.build.toplevel --no-link
+rtk nix build .#nixosConfigurations.default.config.system.build.toplevel --out-link /tmp/nixos-pending
+rtk nvd diff /run/current-system /tmp/nixos-pending
+rtk nix eval --json .#nixosConfigurations.default.config.option.path
 ```
 
-## Activation
+Use the path-binding check only for `sandboxed-apps/nixpak/path-binding.nix` or
+its tests. Run the whole-system build before suggesting activation for a
+configuration change. Use the out-link plus `nvd diff` when package or system
+closure changes matter.
 
-The user has `rebuild` aliased to:
-
-```bash
-sudo nixos-rebuild switch --flake /home/abdulrahman/system-conf#default
-```
-
-**Never run `rebuild` or any other activating `nixos-rebuild` variant without explicit user permission.** A clean validation build does not imply consent to activate.
+A Nix build does not execute activation scripts. When changing one, also inspect
+the relevant current on-disk state, including ancestor symlinks, and make the
+script idempotent across both clean installs and existing machines.
 
 ## Layout
 
-```
-configuration.nix       entry; its imports list defines the canonical lookup order
-flake.nix / flake.lock  inputs: nixpkgs, nixos-hardware, nixpak, nix-cachyos-kernel,
-                        brave-previews, noctalia
-specialArgs.nix         injected via _module.args: username, fullName, email, hostname
-hardware-configuration.nix  generated; do not hand-edit
-packages.nix            system-wide packages
-services/                system services, one file per service (cloudflare, juicefs,
-                        avahi, dokploy, slim); default.nix is the imports aggregator
-modules/                feature toggles (ai, gaming, development, ios, niri-dynamic-float,
-                        remote-control, vicinae)
-system/                 OS layer (audio, graphics, networking, security, optimization)
-terminal/               shell, packages, dotfiles, ghostty (sources config/zsh/)
-sandboxed-apps/         NixPak-wrapped GUI apps (hand-registered in default.nix)
-sandboxed-apps/nixpak/  framework: mkSandboxed (default.nix), mkPathBindingLauncher
-                        (path-binding.nix), mkPrivateUserSandbox (private-user.nix),
-                        sandboxed xdg-open (xdg-utils.nix)
-config/zsh/             zsh function library; sourced from terminal/shell.nix
+```text
+configuration.nix          Main import list and global Nix settings
+flake.nix / flake.lock     Inputs, substituters, NixOS configuration
+specialArgs.nix            User, host, identity, and LAN constants
+hardware-configuration.nix Generated hardware config; do not hand-edit
+packages.nix               Native user/system packages and package overrides
+services/                  System services; default.nix imports them
+modules/                   Feature modules: ai, gaming, development, ios, etc.
+system/                    OS layer: audio, graphics, networking, security, optimization
+terminal/                  Shell, packages, dotfiles, ghostty
+config/zsh/                Zsh function library, sourced from terminal/shell.nix
+sandboxed-apps/            NixPak-wrapped GUI apps
+sandboxed-apps/nixpak/     mkSandboxed framework and sandbox helpers
 ```
 
-When searching for where a setting lives, follow the `configuration.nix` import order top-to-bottom.
+## Package Decisions
 
-## Invariants
+Default rule: GUI apps should be sandboxed with NixPak.
 
-Things that must stay true. Flag any change that would break one.
+Native GUI packages are allowed only when the user asks for it or there is a specific technical reason. Make the reason visible in the change or in the final summary.
 
-- **`username` is never hardcoded** — read from `specialArgs.nix` as `${username}`; in scripts use `$HOME` or `/home/${username}/...` formed from it.
-- **GUI apps go through `mkSandboxed`.** A new native GUI binary on `users.users.${username}.packages` is a smell — wrap it or justify the exception.
-- **`sandboxed-apps/default.nix` is hand-maintained.** A new app file must be both `call`ed in the `let` block AND appended to the packages list, or it never reaches the user's PATH.
-- **`flake.lock` is reproducibility-critical** — update only via `nix flake update` or `nix flake lock --update-input <name>`. Never hand-edit.
-- **`hardware-configuration.nix` is generated** — regenerate via `nixos-generate-config`, don't hand-edit.
-- **Substituter list in `configuration.nix` uses `lib.mkForce`.** Adding more substituters elsewhere without `mkForce` is silently dropped at module merge time.
-- **The agenix identity must resolve to a root-filesystem path.** `age.identityPaths` (`system/networking.nix`) lists `/root/.ssh/id_ed25519` first — a manually-provisioned copy on the `/` subvolume. Don't point it _only_ at `/home/${username}/.ssh/...`: `/home` is a separate subvolume mounted ~3s too late for early-boot decryption (see Gotchas).
-- **Comments are rare.** Only where the _why_ isn't obvious. Don't restate what code does.
-- **No backwards-compat shims.** Change code outright; this is a personal config, not a library.
+For native packages:
 
-## Sandboxed apps (the most-edited area)
+1. Prefer nixpkgs when the attr is the right software.
+2. If a nixpkgs attr has the same name but is different software, do not override its version and hope. Add a local package expression.
+3. Put local package expressions in `local-packages/<name>.nix` when they are non-trivial.
+4. Add the package to `users.users.${username}.packages`.
+5. If a new package file is imported by the flake, stage it before validation.
 
-The wrapper is `mkSandboxed { … }` in `sandboxed-apps/nixpak/default.nix`. Each app gets its own file under `sandboxed-apps/<name>.nix` and is registered in `sandboxed-apps/default.nix`. Browser variants share a local `mkBrave` helper in `browser.nix`; Brave runs as the normal login user and stores its profile under the host `~/.config/BraveSoftware/Brave-Origin-Nightly`.
+For prebuilt binaries on NixOS:
 
-**Available presets** (defined in `nixpak/default.nix`):
-`network` · `wayland` · `x11` · `audio` · `gpu` · `usb` · `controller` · `portals` · `notifications` · `systray` · `secrets` · `discovery`
+- Use `autoPatchelfHook` for ELF binaries.
+- Use `makeWrapper` for runtime environment.
+- Prefer system tools such as `pkgs.ffmpeg` over bundled tools when upstream supports it.
+- Disable or explain app self-updaters when the package is Nix-managed.
+- Include `meta.mainProgram`, `homepage`, `license`, `platforms`, and `sourceProvenance` for binary releases.
 
-Pull binds from presets first; add `extraPerms` only for app-specific paths. Optional `resourceLimits = { cpu = "..."; mem = "..."; }` wraps the launcher in `systemd-run --user --scope`.
+## Sandboxed Apps
 
-**Sandbox don'ts**
+Use `utils.mkSandboxed { ... }` from `sandboxed-apps/nixpak/default.nix`.
 
-- No `network` preset for an offline-only app.
-- No wholesale `$HOME` bind — narrow binds only. `sandboxed-apps/browser.nix` is the reference for tight permission scoping.
+Each sandboxed app needs:
+
+1. `sandboxed-apps/<name>.nix`
+2. A `let` binding in `sandboxed-apps/default.nix`
+3. An entry in `users.users.${username}.packages`
+
+Available presets:
+
+```text
+network wayland x11 audio gpu usb controller webcam bluetooth kvm u2f
+discovery portals notifications systray secrets mpris
+```
+
+The framework is offline by default; only the `network` preset enables host
+network access. Use presets first, `homeBinds` for app-specific paths below the
+user's home, and `extraPerms` for other app-specific permissions. Use
+`pathBinding = "file"` or `"dir"` when access should follow launch arguments.
+Use narrow binds; never bind all of `$HOME`.
+
+Sandbox checks:
+
+- Add `network` only when the app actually needs it.
 - No `org.freedesktop.portal.*` D-Bus access unless the app actually uses portals.
-- No silent removal of a preset to "fix" a bug — investigate first. Removing `gpu` from an Electron app breaks hardware video decode without an error.
+- Do not remove `gpu` from Chromium/Electron apps just to avoid a crash; investigate first.
+- `sandboxed-apps/browser.nix` is the reference for tight browser permissions.
+- `sandboxed-apps/default.nix` is hand-maintained. Missing registration means the app is not on PATH after rebuild.
 
-## Common workflows
+## Common Workflows
 
-**Add a sandboxed app**
+Add a sandboxed GUI app:
 
-1. Write `sandboxed-apps/<name>.nix`. Model after `discord.nix` (single binary) or `browser.nix` (multi-variant with a local helper).
-2. In `sandboxed-apps/default.nix`: add `<app> = call ./<name>.nix;` to the `let` block AND append the package to `users.users.${username}.packages`.
-3. Validate: `nix build .#nixosConfigurations.default.config.system.build.toplevel --no-link`.
-4. Suggest `rebuild` — don't run it.
+1. Create sandboxed-apps/<name>.nix.
+2. Model simple apps after discord.nix; model multi-variant apps after browser.nix.
+3. Register it in sandboxed-apps/default.nix in both the let block and package list.
+4. Run parse/build validation.
+5. Suggest rebuild; do not run it.
 
-**Update flake inputs**
+Add a native package:
 
-1. `nix flake update` (or `nix flake lock --update-input <name>` for a single one).
-2. Build pending closure: `nix build .#nixosConfigurations.default.config.system.build.toplevel --out-link /tmp/nixos-pending`.
-3. `nvd diff /run/current-system /tmp/nixos-pending`.
-4. Show diff, wait for go-ahead, user runs `rebuild`.
-5. If a build fails: `nix flake lock --override-input <name> <previous-flake-ref>` (or restore the file from git if tracked).
+1. Confirm it should not be sandboxed.
+2. Use nixpkgs directly if the attr is correct.
+3. Otherwise create local-packages/<name>.nix and call it from packages.nix.
+4. Stage the new local package file.
+5. Parse the changed Nix files.
+6. Build the toplevel.
 
+Update flake inputs:
 
-**Inspect closures with nvd**
+```bash
+rtk nix flake update
+rtk nix build .#nixosConfigurations.default.config.system.build.toplevel --out-link /tmp/nixos-pending
+rtk nvd diff /run/current-system /tmp/nixos-pending
+```
 
-Upstream: <https://khumba.net/projects/nvd/>
+For one input, use:
 
-- `nvd diff /run/current-system /tmp/nixos-pending` is the standard pre-activation review after building an out-link.
-- `nvd list /tmp/nixos-pending` shows packages in a built closure.
-- `nvd history /nix/var/nix/profiles/system` shows system generation history.
+```bash
+rtk nix flake lock --update-input input-name
+```
 
-**Find where a setting lives**
+If a build fails after an input update, diagnose before rolling back. Do not
+overwrite pre-existing `flake.lock` changes; restore with Nix or Git only when
+the task's baseline is known. Never hand-edit `flake.lock`.
 
-- First pass: `rg --type nix '<term>' /home/abdulrahman/system-conf`.
-- For options that fall through to upstream defaults: `nix eval --json .#nixosConfigurations.default.config.<option.path>` (no hit = literal default; hit but no rg match = set indirectly).
-- For shell functions: grep `config/zsh/`.
-- Search priority follows `configuration.nix` imports.
+Find a setting:
+
+```bash
+rtk rg --type nix 'term' /home/abdulrahman/system-conf
+rtk rg 'term' config/zsh
+rtk nix eval --json .#nixosConfigurations.default.config.option.path
+```
 
 ## Diagnostics
 
-When something fails or misbehaves, reach for these in order:
+Build log for a failed derivation:
 
 ```bash
-# A specific derivation failed — show the build log
-nix log /nix/store/<hash>-<name>.drv
-
-# Eval-time error — drop into the repl with the flake loaded
-nix repl --expr 'builtins.getFlake "/home/abdulrahman/system-conf"'
-# inside: :p outputs.nixosConfigurations.default.config.<path>
-
-# System activated, but something's broken
-systemctl --failed --no-pager
-journalctl --user -b -p err --no-pager | tail -50
-
-# Recent coredumps (filter by binary — see Gotchas re: pulseaudio noise)
-coredumpctl list COREDUMP_COMM=<binary> --since '1h ago'
+rtk nix log /nix/store/hash-name.drv
 ```
 
-For sandboxed Chromium-based app crashes, the in-process signal handler gets masked by crashpad. Use the `brave-debug` variant in `sandboxed-apps/browser.nix` (already pre-baked with `--enable-logging=stderr --v=1` and clipboard/data-transfer vmodule). Symbols won't be present in nightly builds — chasing internal Chromium crashes from this side is a dead end; pivot or upstream.
+Eval debugging:
 
-## Gotchas
+```bash
+rtk nix repl --expr 'builtins.getFlake "/home/abdulrahman/system-conf"'
+```
 
-Each one with what to actually do.
+Inside the repl:
 
-- **`system.userActivationScripts` vs `system.activationScripts`** — first runs as the user with `$HOME` set, second as root. Pick the one matching where the target path lives.
-- **agenix identity — must live on the root filesystem, provisioned by hand.** With `boot.initrd.systemd.enable`, the `agenixInstall` activation snippet runs in early boot (~2.7s) before `home.mount` (~5.9s). If `age.identityPaths` points at the user's `/home/${username}/.ssh/id_ed25519`, agenix logs `[agenix] WARNING: no readable identities found!`, decrypts nothing, and `/run/agenix/*` stays empty — so every consumer (`dnsproxy`, `cloudflared`, `dokploy`, `juicefs`) dies at systemd step `CREDENTIALS` (`status=243`). Fix: keep a copy of the identity on the `/` subvolume at `/root/.ssh/id_ed25519` (listed first in `system/networking.nix`). It is **mutable state outside the flake** — the private key is never committed or placed in the Nix store. Provision after a fresh install / key rotation: `sudo install -d -m700 /root/.ssh && sudo install -m600 /home/${username}/.ssh/id_ed25519 /root/.ssh/id_ed25519`. Confirm decryption with `journalctl -b | grep agenix` (no "no readable identities") and `ls /run/agenix`.
-- **Forgot to register a new sandbox file in `sandboxed-apps/default.nix`** — if the user reports "the new app isn't on my PATH after rebuild", check this first.
-- **Substituter `lib.mkForce` swallow** — if a new substituter set elsewhere doesn't take effect, the `mkForce` in `configuration.nix` is why. Add it to that list, don't fight it from another module.
-- **Brave nightly + file clipboard paste** — pasting a path with certain Unicode codepoints (e.g. U+FF5C `｜`, yt-dlp's `|` substitution) into a file-upload UI traps the browser on a CHECK; Brave's sandbox also only binds `~/Downloads`, so paths outside it can't be read even if they don't crash. `copy()` in `config/zsh/common.zsh` handles both: it hardlinks (falls back to reflink/cp) the file into `~/Downloads/.copy-stage/` with an ASCII-sanitized name (`iconv //TRANSLIT//IGNORE` + `tr`) and puts that as a `text/uri-list` `file://` URI on the clipboard. yt-dlp invocations in `mp3()`/`mp4()` use `--restrict-filenames` to avoid producing the bad names in the first place. If you bypass `copy()` and put a raw non-ASCII path on the clipboard, the crash returns.
-- **Pulseaudio SIGSYS loop on this box** — pulseaudio crashes on a seccomp violation roughly once per second. When grepping `coredumpctl list` or `journalctl` during a crash investigation, filter by the binary you care about; otherwise pulseaudio entries drown out the signal.
-- **`NO_MONITOR` (zsh `setopt nomonitor`) breaks `read` after backgrounding** — in shell functions that background a pipeline then `read`, leave `MONITOR` on and silence the job-notification with `&!` instead of toggling `NO_MONITOR`. The latter wedges subsequent reads.
+```text
+:p outputs.nixosConfigurations.default.config.option.path
+```
 
-## Don'ts
+Activated-system checks, only when relevant:
 
-Explicit denylist for risky operations:
+```bash
+rtk systemctl --failed --no-pager
+rtk journalctl --user -b -p err --no-pager
+rtk coredumpctl list COREDUMP_COMM=binary --since '1h ago'
+```
 
-- Don't run `rebuild`, `nixos-rebuild switch`, `nixos-rebuild boot`, or any activation command without explicit user permission.
-- Don't run `nix-collect-garbage` (especially `-d`) or `nix store gc` without explicit ask — it deletes recovery generations.
-- Don't `git push`, `git reset --hard`, `git rebase -i`, or any history-rewriting op without explicit ask.
-- Don't hand-edit `flake.lock`, `hardware-configuration.nix`, or anything under `/nix/store/`.
-- Don't remove any binary-cache substituter from `flake.nix` `nixConfig` or `configuration.nix` `nix.settings`, even ones that look unused. The user keeps them deliberately.
-- Don't add `--no-sandbox` / `--disable-features=Sandbox` to a misbehaving app as a fix — investigate the real cause.
-- Don't `sudo` a normal-workflow command (`sudo nix flake update`, etc.) — that creates root-owned files in the repo and breaks the next user-mode operation.
+Filter coredumps by the binary you care about; pulseaudio has a known SIGSYS loop on this machine.
 
-## Pointers
+## Critical Invariants
 
-- Persistent agent memory for this project: `/home/abdulrahman/.claude/projects/-home-abdulrahman-system-conf/memory/`. Index is `MEMORY.md` (one-line entries pointing at per-topic files). Check it on cold start.
-- This file is the source of truth; `CLAUDE.md` is a symlink to it.
+- `flake.lock` is reproducibility-critical. Update it only with `nix flake update` or `nix flake lock --update-input`.
+- `hardware-configuration.nix` is generated. Regenerate with `nixos-generate-config`; do not hand-edit.
+- `system.stateVersion` records the original installation compatibility baseline. Do not bump it as part of an ordinary upgrade.
+- `configuration.nix` forces `nix.settings.substituters` with `lib.mkForce`. Add substituters there or they can be silently dropped.
+- Do not remove existing binary caches from `flake.nix` or `configuration.nix`, even if they look unused.
+- `age.identityPaths` must include `/root/.ssh/id_ed25519` first. Do not point agenix only at `/home/${username}/.ssh/...`; `/home` mounts too late for early boot decryption.
+- Never commit plaintext secrets or private keys, or interpolate them into the Nix store.
+
+## Known Gotchas
+
+- `system.userActivationScripts` runs as the user with `$HOME`; `system.activationScripts` runs as root.
+- Evaluation and build do not run activation scripts, so successful builds cannot validate their behavior against stale mutable state.
+- Agenix early boot requires a manually provisioned root-filesystem key at `/root/.ssh/id_ed25519`. If missing, `/run/agenix/*` stays empty and services using credentials fail with `status=243`.
+- Systemd services that mount FUSE filesystems need `/run/wrappers/bin` on `PATH` so they use the NixOS `fusermount3` wrapper.
+- Brave nightly can crash when a file-upload clipboard URI contains some Unicode path characters. Use `copy()` from `config/zsh/common.zsh`; it stages files under `~/Downloads/.copy-stage/` with ASCII-safe names.
+- `NO_MONITOR` in zsh can break `read` after backgrounding. Keep monitor mode on and use `&!` to silence job notifications.
+
+## Do Not
+
+- Do not run activation commands without explicit permission.
+- Do not run `nix-collect-garbage`, `nix store gc`, or other generation-deleting commands without explicit ask.
+- Do not run `git push`, `git reset --hard`, `git rebase -i`, or history rewrites without explicit ask.
+- Do not hand-edit `flake.lock`, `hardware-configuration.nix`, or anything in `/nix/store`.
+- Do not add `--no-sandbox` or `--disable-features=Sandbox` to fix sandboxed app problems.
+- Do not use `sudo` for normal flake operations such as `nix flake update`; it creates root-owned repo files.
+
+## Project Memory
+
+Start with the index:
+
+```text
+/home/abdulrahman/.claude/projects/-home-abdulrahman-system-conf/memory/MEMORY.md
+```
+
+It contains short links to focused notes. Read only the notes relevant to the
+current investigation, and verify potentially stale claims against the live
+worktree.

@@ -86,30 +86,11 @@ window-rule {
     default-window-height { fixed 720; }
 }
 
-// Blur + popup blur for every window. Opacity itself comes from the
-// GTK theme (gtk-{3,4}.0/gtk.css) — opaque apps show no blur anyway,
-// so this is safe as a global default.
 window-rule {
-    background-effect {
-        xray true
-       blur true
-    }
-
-    popups {
-        // Matches the default libadwaita pop-up corner radius.
-        geometry-corner-radius 15
-        background-effect {
-            blur true
-        }
-    }
-}
-
-blur {
-    // off
-    passes 4
-    offset 3
-    noise 0.02
-    saturation 1.5
+    match app-id="dev.noctalia.Noctalia"
+    open-floating true
+    default-column-width { fixed 1080; }
+    default-window-height { fixed 920; }
 }
 
 window-rule {
@@ -128,6 +109,12 @@ window-rule {
     // Draw the focus ring as a hollow frame, not a solid fill behind the
     // window — otherwise the ring color bleeds through transparent backgrounds.
     draw-border-with-background false
+}
+
+window-rule {
+    match app-id=r#"^steam_app_1174180$"# title=r#"^$"#
+    open-floating false
+    open-focused false
 }
 
 window-rule {
@@ -152,11 +139,6 @@ window-rule {
 
     shadow {
         off
-    }
-
-    background-effect {
-        xray false
-        blur false
     }
 }
 
@@ -183,7 +165,7 @@ window-rule {
     }
 }
 
-// Set the overview wallpaper on the backdrop.
+// Set the Noctalia overview wallpaper on the backdrop.
 layer-rule {
     match namespace="^noctalia-overview*"
     place-within-backdrop true
@@ -191,9 +173,7 @@ layer-rule {
 
 // Live wallpaper (linux-wallpaperengine) is forced onto the wlr *background*
 // layer via `--layer background` (wrapped in system/graphics.nix). Fold it into
-// niri's backdrop so xray-blurred transparent windows sample it; without this it
-// also gets cloned into every overview workspace card. Upstream changed the
-// default layer to BOTTOM in PR #528, which is what broke transparency here.
+// niri's backdrop so it is not cloned into every overview workspace card.
 layer-rule {
     match namespace="^linux-wallpaperengine$"
     place-within-backdrop true

@@ -10,6 +10,7 @@ binds {
     Mod+Shift+B hotkey-overlay-title="Open a Firefox " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus firefox --id firefox --focus-existing"; }
     Mod+N hotkey-overlay-title="Open a FileManager " repeat=false { spawn "nautilus" "-w"; }
     Mod+Space hotkey-overlay-title="Open Launcher" repeat=false { spawn "vicinae" "toggle"; }
+    // Ctrl+Space hotkey-overlay-title="Toggle Handy Transcription" repeat=false { spawn "handy" "--toggle-transcription"; }
     Mod+S hotkey-overlay-title="Screenshot Region" repeat=false { screenshot; }
     Mod+Shift+S hotkey-overlay-title="Screenshot Full Screen" repeat=false { screenshot-screen; }
     Mod+P hotkey-overlay-title="Open Mission Center " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus missioncenter --id io.missioncenter.MissionCenter --toggle-previous --focus-existing"; }
@@ -19,13 +20,13 @@ binds {
     
     Mod+M repeat=false hotkey-overlay-title="Open YT Music (Webapp)" { spawn-sh "~/.config/niri/niri-launch-or-focus-webapp music.youtube.com"; }
     Mod+Y repeat=false hotkey-overlay-title="Open YouTube (Webapp)" { spawn-sh "~/.config/niri/niri-launch-or-focus-webapp youtube.com"; }
-    // Mod+{ spawn-sh "noctalia-shell ipc call launcher emoji"; }
     Mod+Shift+E repeat=false { expand-column-to-available-width; }
 
 
     // ─── Session ───
-    // Mod+Alt+L hotkey-overlay-title="Lock screen"   { spawn-sh "noctalia-shell ipc call lockScreen lock"; }
-    Mod+Shift+Q repeat=false { spawn-sh "noctalia-shell ipc call sessionMenu toggle"; }
+    // Mod+Alt+L hotkey-overlay-title="Lock screen"   { spawn-sh "noctalia msg session lock"; }
+    Mod+Shift+Q repeat=false { spawn-sh "noctalia msg panel-toggle session"; }
+    Mod+Ctrl+G hotkey-overlay-title="Toggle Game Mode" allow-inhibiting=false repeat=false { spawn-sh "~/.config/niri/game-mode toggle"; }
 
     // ─── Window Management ───
     Mod+Q repeat=false { close-window; }
@@ -78,14 +79,14 @@ binds {
     Mod+Comma  { consume-or-expel-window-left; }
     Mod+Period { consume-or-expel-window-right; }
     
-    Mod+WheelScrollDown  cooldown-ms=150  { spawn-sh "~/.config/niri/focus-column right"; }
-    Mod+WheelScrollUp    cooldown-ms=150  { spawn-sh "~/.config/niri/focus-column left"; }
-    Shift+WheelScrollDown cooldown-ms=150 { focus-workspace-down; }
-    Shift+WheelScrollUp   cooldown-ms=150 { focus-workspace-up; }
-    Mod+Shift+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
-    Mod+Shift+WheelScrollUp   cooldown-ms=150 { move-column-to-workspace-up; }
-    Mod+Ctrl+WheelScrollDown  cooldown-ms=150 { move-column-right; }
-    Mod+Ctrl+WheelScrollUp    cooldown-ms=150 { move-column-left; }
+    Mod+WheelScrollDown  cooldown-ms=150  { spawn-sh "~/.config/niri/game-mode run ~/.config/niri/focus-column right"; }
+    Mod+WheelScrollUp    cooldown-ms=150  { spawn-sh "~/.config/niri/game-mode run ~/.config/niri/focus-column left"; }
+    Shift+WheelScrollDown cooldown-ms=150 { spawn-sh "~/.config/niri/game-mode run niri msg action focus-workspace-down"; }
+    Shift+WheelScrollUp   cooldown-ms=150 { spawn-sh "~/.config/niri/game-mode run niri msg action focus-workspace-up"; }
+    Mod+Shift+WheelScrollDown cooldown-ms=150 { spawn-sh "~/.config/niri/game-mode run niri msg action move-column-to-workspace-down"; }
+    Mod+Shift+WheelScrollUp   cooldown-ms=150 { spawn-sh "~/.config/niri/game-mode run niri msg action move-column-to-workspace-up"; }
+    Mod+Ctrl+WheelScrollDown  cooldown-ms=150 { spawn-sh "~/.config/niri/game-mode run niri msg action move-column-right"; }
+    Mod+Ctrl+WheelScrollUp    cooldown-ms=150 { spawn-sh "~/.config/niri/game-mode run niri msg action move-column-left"; }
 
 
     // ─── Monitor ───

@@ -32,6 +32,7 @@ let
         "notifications"
         "secrets"
         "systray"
+        "mpris"
         "bluetooth"
         "u2f"
       ]

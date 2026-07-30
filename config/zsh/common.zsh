@@ -406,18 +406,16 @@ mp4() {
   rm -rf "$tmp"
 }
 
-# Fuzzy history search as a command (same UX as Ctrl-R, runnable by name).
-# Optional arg = initial fzf query: `history docker` opens prefiltered.
+# Atuin history search as a command (same UX as Ctrl-R, runnable by name).
+# Optional args become the initial query: `history docker` opens prefiltered.
 # Selected line lands on the prompt buffer, ready to edit or run.
 # Shadows the `history` builtin — use `fc -l` if you need the raw list.
 history() {
+  emulate -L zsh
   local cmd
-  cmd=$(fc -rl 1 \
-        | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//' \
-        | awk '!seen[$0]++' \
-        | fzf --no-sort --reverse --height=40% --tiebreak=index \
-              --query="$*" --prompt='search ❯ ') || return
-  print -z -- "$cmd"
+  cmd=$(ATUIN_SHELL=zsh ATUIN_LOG=error atuin search --interactive -- "$@" 3>&1 1>&2 2>&3) || return
+  cmd="${cmd#__atuin_accept__:}"
+  [[ -n "$cmd" ]] && print -z -- "$cmd"
 }
 
 
@@ -512,3 +510,6 @@ cpp() {
     }
     END { print "" }' total_size="$(stat -c '%s' "${1}")" count=0
 }
+
+# Loaded separately because the guarded update workflow is substantial.
+source "$HOME/system-conf/config/zsh/update.zsh"

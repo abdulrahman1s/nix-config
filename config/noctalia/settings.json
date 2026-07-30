@@ -148,28 +148,6 @@
                     "visualizerType": "linear"
                 },
                 {
-                    "compactMode": true,
-                    "diskPath": "/",
-                    "iconColor": "none",
-                    "id": "SystemMonitor",
-                    "showCpuCores": false,
-                    "showCpuFreq": false,
-                    "showCpuTemp": false,
-                    "showCpuUsage": true,
-                    "showDiskAvailable": false,
-                    "showDiskUsage": false,
-                    "showDiskUsageAsPercent": false,
-                    "showGpuTemp": false,
-                    "showLoadAverage": false,
-                    "showMemoryAsPercent": false,
-                    "showMemoryUsage": true,
-                    "showNetworkStats": false,
-                    "showSwapUsage": false,
-                    "textColor": "none",
-                    "useMonospaceFont": true,
-                    "usePadding": false
-                },
-                {
                     "defaultSettings": {
                         "cursorPosition": 0,
                         "filePath": "",
@@ -447,9 +425,9 @@
         ],
         "onlySameOutput": true,
         "pinnedApps": [
+            "org.gnome.Nautilus",
             "io.missioncenter.MissionCenter",
             "steam",
-            "org.gnome.Nautilus",
             "brave-origin-nightly",
             "com.mitchellh.ghostty",
             "code"

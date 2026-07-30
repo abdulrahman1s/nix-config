@@ -49,6 +49,7 @@
     # in initrd, so it is readable when agenix decrypts (~2.7s, before /home).
     # The ~/.ssh path (also persisted) stays as a post-mount fallback.
     identityPaths = [
+      "/root/.ssh/id_ed25519"
       "/persist/root/.ssh/id_ed25519"
       "/home/${username}/.ssh/id_ed25519"
     ];

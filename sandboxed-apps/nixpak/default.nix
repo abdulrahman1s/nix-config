@@ -33,6 +33,7 @@
 #   notifications - Desktop notifications
 #   systray       - System tray icon (StatusNotifier)
 #   secrets       - Keyring/secrets service access
+#   mpris         - Media player status/control export
 #
 # Per-invocation dynamic bind:
 #   pathBinding = "dir";  - For each arg that resolves to a real path, rw-bind
@@ -371,6 +372,12 @@ let
         secrets = {
           dbus.policies = {
             "org.freedesktop.secrets" = "talk"; # System keyring integration
+          };
+        };
+
+        mpris = {
+          dbus.policies = {
+            "org.mpris.MediaPlayer2.*" = "own";
           };
         };
 

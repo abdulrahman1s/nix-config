@@ -1,0 +1,71 @@
+#!/usr/bin/env sh
+set -eu
+
+wallpaper="$HOME/.local/share/Steam/steamapps/workshop/content/431960/3329533084"
+engine_pid=""
+outputs=""
+
+active_outputs() {
+  json="$(niri msg --json outputs 2>/dev/null)" || return 1
+  parsed="$(
+    printf '%s\n' "$json" \
+      | jq -r 'to_entries[] | select((.value | has("logical") | not) or (.value.logical != null)) | .key' 2>/dev/null
+  )" || return 1
+
+  printf '%s\n' "$parsed" | sort
+}
+
+stop_wallpaperengine() {
+  [ -n "$engine_pid" ] || return 0
+  kill "$engine_pid" 2>/dev/null || true
+  wait "$engine_pid" 2>/dev/null || true
+  engine_pid=""
+}
+
+start_wallpaperengine() {
+  set -- \
+    --fps 30 \
+    --clamp clamp \
+    --silent
+
+  while IFS= read -r output; do
+    [ -n "$output" ] || continue
+    set -- "$@" \
+      --screen-root "$output" \
+      --bg "$wallpaper" \
+      --scaling fill
+  done <<EOF
+$outputs
+EOF
+
+  set -- "$@" \
+    --set-property schemecolor=203,128,140 \
+    "$wallpaper"
+
+  linux-wallpaperengine "$@" &
+  engine_pid="$!"
+}
+
+restart_wallpaperengine() {
+  stop_wallpaperengine
+  start_wallpaperengine
+}
+
+cleanup() {
+  stop_wallpaperengine
+}
+
+trap 'cleanup; exit 0' INT TERM
+trap cleanup EXIT
+
+while :; do
+  if next_outputs="$(active_outputs)" && [ "$next_outputs" != "$outputs" ]; then
+    outputs="$next_outputs"
+    if [ -n "$outputs" ]; then
+      restart_wallpaperengine
+    else
+      stop_wallpaperengine
+    fi
+  fi
+  sleep 10
+done

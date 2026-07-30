@@ -24,7 +24,7 @@ Limine ─▶ ly ─▶ niri ─▶ noctalia ─▶ apps, each in its own bubble
             │
             ├─ helper scripts in config/niri/ wiring niri's IPC into behavior
             ├─ vicinae launcher with Nix-built extensions
-            └─ a small LAN HTTP server I drive from iOS Shortcuts
+            └─ a small LAN HTTPS server I drive from iOS Shortcuts
 ```
 
 ## A look at it
@@ -223,11 +223,11 @@ GC, store optimization, btrfs scrub, and fstrim are on timers.
 ## Terminal
 
 The shell ([`terminal/shell.nix`](terminal/shell.nix) +
-[`config/zsh/common.zsh`](config/zsh/common.zsh)) is zsh with vi-mode, fzf
-(`Ctrl-R`/`Ctrl-T`/`Alt-C`, `**<Tab>`), fzf-tab, history-substring-search, and
-zoxide bound as `cd`. History is 100k, de-duplicated and shared, and
-leading-space commands aren't saved. Ghostty windows remember the last directory
-I was in.
+[`config/zsh/common.zsh`](config/zsh/common.zsh)) is zsh with vi-mode, Atuin
+on `Ctrl-R`, fzf (`Ctrl-T`/`Alt-C`, `**<Tab>`), fzf-tab,
+history-substring-search, and zoxide bound as `cd`. History is 100k,
+de-duplicated and shared, and leading-space commands aren't saved. Ghostty
+windows remember the last directory I was in.
 
 Some of the functions I use most:
 
@@ -245,14 +245,15 @@ Plus the usual aliases: `rebuild`, `ls` → eza, `:q` to exit, `please` for sudo
 
 ## Remote control from my phone
 
-[`modules/remote-control.nix`](modules/remote-control.nix) runs a small Python
-HTTP server ([source](modules/remote-control-server.py)) bound only to the wired
-LAN address, behind a bearer token generated to `/etc/remote-control.token` on
-first boot. It drops to my user and finds the live wayland/niri sockets, so it
-can reach into the running session. Endpoints: lock / unlock (unlock also wakes
-the monitors), session status, read/write the clipboard, a screenshot, and
-shutdown / reboot. I wire these into iOS Shortcuts to lock the desktop, push a
-link to its clipboard, or shut it down from my phone.
+[`modules/remote-control.nix`](modules/remote-control.nix) runs an unprivileged
+Python HTTPS server ([source](modules/remote-control-server.py)) bound only to
+the wired LAN address. A bearer token generated at
+`/etc/remote-control.token` is passed through systemd credentials, and a
+self-signed certificate whose SAN matches the static LAN address lives in the
+persisted service state directory. The certificate must be trusted on the
+iPhone once. Read-only operations use `GET`; lock, unlock, clipboard writes,
+shutdown, and reboot use `POST`. Narrow polkit rules permit only the two logind
+power actions, while Wayland operations run as my user.
 
 ## Secrets
 

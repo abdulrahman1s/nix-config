@@ -1,4 +1,8 @@
-{ pkgs, username, inputs, ... }:
+{ pkgs, username, ... }:
+
+let
+  frameGui = pkgs.callPackage ./local-packages/frame.nix { };
+in
 {
 
 
@@ -9,17 +13,21 @@
     libz
   ];
 
+  programs.steam-cleaner.enable = true;
+
 
   # ── Virtualisation ────────────────────────────────────────
   virtualisation.libvirtd.enable = true;
   programs.virt-manager.enable = true;
 
 
+
   # ── User Packages ─────────────────────────────────────────
   users.users.${username} = {
     extraGroups = [ "plugdev" ];
-    packages = with pkgs; [
-      inputs.brave-previews.packages.${pkgs.stdenv.hostPlatform.system}.brave-origin-nightly
+    packages = (with pkgs; [
+      wtype
+      handy
 
       hcxtools
       #   (hashcat.override {
@@ -43,7 +51,7 @@
       # Media
       vlc
       loupe # GNOME image viewer (native, unsandboxed by request)
-      # orca-slicer
+
 
       # Tools
       ethtool
@@ -54,6 +62,9 @@
 
       waycorner # hot-corner daemon for Wayland
       signal-desktop
+    ]) ++ [
+      # Native by request; this repo normally sandboxes GUI apps.
+      frameGui
     ];
   };
 

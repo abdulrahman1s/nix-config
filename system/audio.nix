@@ -37,6 +37,14 @@ in
             "device.profile" = "output:hdmi-stereo-extra1";
           };
         }
+        {
+          matches = [
+            { "node.name" = "alsa_output.pci-0000_0a_00.1.hdmi-stereo-extra1"; }
+          ];
+          actions.update-props = {
+            "priority.session" = 50000;
+          };
+        }
       ];
     };
   };

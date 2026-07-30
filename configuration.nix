@@ -45,13 +45,28 @@
     trusted-users = [ "root" username ];
     substituters = lib.mkForce [
       "https://nixos-cache-proxy.cofob.dev"
-      #      "https://cache.nixos.org"
+      "https://cache.nixos.org" # fallback when the Cloudflare proxy is unavailable
       "https://cache.nixos-cuda.org"
+      "https://attic.xuyh0120.win/lantian"
+      "https://cache.garnix.io"
+      "https://noctalia.cachix.org"
     ];
-    trusted-public-keys = [ "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M=" ];
+    trusted-public-keys = [
+      "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
+      "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
+      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+      "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+    ];
     http-connections = 50;
     warn-dirty = false;
+    # During builds, collect only unreachable store paths before free space
+    # becomes critical. System generations remain GC roots and stay roll-backable.
+    min-free = 25 * 1024 * 1024 * 1024;
+    max-free = 35 * 1024 * 1024 * 1024;
   };
+
+  # Keep enough rollback entries without letting copied kernels/initrds fill EFI.
+  boot.loader.limine.maxGenerations = 10;
 
   time.timeZone = "Africa/Cairo";
   i18n.defaultLocale = "en_US.UTF-8";
@@ -75,6 +90,9 @@
       "openrazer"
     ];
   };
+
+    services.tailscale.enable = true;
+
 
   # Fixes Gnome Display Manager fails to login until Wi-Fi connection is established.
   # SEE: https://discourse.nixos.org/t/gnome-display-manager-fails-to-login-until-wi-fi-connection-is-established/50513/14

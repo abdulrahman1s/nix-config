@@ -2,21 +2,7 @@
 
 let
   hardening = import ../system/hardening.nix;
-
-  slim = pkgs.stdenv.mkDerivation {
-    pname = "slim";
-    version = "0.8.0";
-    src = pkgs.fetchurl {
-      url = "https://github.com/kamranahmedse/slim/releases/download/0.9.1/slim_0.9.1_linux_amd64.tar.gz";
-      hash = "sha256-1VuZuYinnNPR8AEKDZfujaKLbRJjYqi7YcwF896Qr4s=";
-    };
-    sourceRoot = ".";
-    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-    installPhase = ''
-      mkdir -p $out/bin
-      cp slim $out/bin/slim
-    '';
-  };
+  slim = pkgs.callPackage ../local-packages/slim.nix { };
 
   slimServices = [
     { domain = "homeassistant"; port = 8123; }
@@ -24,10 +10,21 @@ let
     { domain = "logging"; port = 7777; }
     { domain = "radio"; port = 4444; }
     { domain = "dokploy"; port = 3000; }
+    {
+      domain = "minecraft";
+      port = 3001;
+      routes = [
+        { path = "/backend"; port = 8091; }
+      ];
+    }
   ];
 
   slimConfigFile = (pkgs.formats.yaml { }).generate "slim-config.yaml" {
-    services = map (s: { inherit (s) domain port; } // (if s ? path then { inherit (s) path; } else { })) slimServices;
+    services = map
+      (s:
+        { inherit (s) domain port; }
+        // (if s ? routes then { inherit (s) routes; } else { }))
+      slimServices;
     log_mode = "minimal";
     cors = false;
   };
@@ -58,16 +55,26 @@ in
           natUp = pkgs.writeScript "slim-nat-up" ''
             #!${pkgs.bash}/bin/bash
             IPT="${pkgs.iptables}/bin/iptables"
+            IP6T="${pkgs.iptables}/bin/ip6tables"
+            # Local names may resolve to ::1 first; redirect both families so
+            # Docker-published ports cannot intercept Slim domains.
             # Create SLIM chain (ignore error if already exists)
             $IPT -t nat -N SLIM 2>/dev/null || true
+            $IP6T -t nat -N SLIM 2>/dev/null || true
             # Add redirect rules into the SLIM chain
             $IPT -t nat -C SLIM -p tcp -d 127.0.0.1/32 --dport 80 -j REDIRECT --to-ports 10080 2>/dev/null \
               || $IPT -t nat -A SLIM -p tcp -d 127.0.0.1/32 --dport 80 -j REDIRECT --to-ports 10080
             $IPT -t nat -C SLIM -p tcp -d 127.0.0.1/32 --dport 443 -j REDIRECT --to-ports 10443 2>/dev/null \
               || $IPT -t nat -A SLIM -p tcp -d 127.0.0.1/32 --dport 443 -j REDIRECT --to-ports 10443
+            $IP6T -t nat -C SLIM -p tcp -d ::1/128 --dport 80 -j REDIRECT --to-ports 10080 2>/dev/null \
+              || $IP6T -t nat -A SLIM -p tcp -d ::1/128 --dport 80 -j REDIRECT --to-ports 10080
+            $IP6T -t nat -C SLIM -p tcp -d ::1/128 --dport 443 -j REDIRECT --to-ports 10443 2>/dev/null \
+              || $IP6T -t nat -A SLIM -p tcp -d ::1/128 --dport 443 -j REDIRECT --to-ports 10443
             # Jump from OUTPUT into SLIM (on loopback, matching slim's doctor check)
             $IPT -t nat -C OUTPUT -o lo -p tcp -j SLIM 2>/dev/null \
               || $IPT -t nat -I OUTPUT 1 -o lo -p tcp -j SLIM
+            $IP6T -t nat -C OUTPUT -o lo -p tcp -j SLIM 2>/dev/null \
+              || $IP6T -t nat -I OUTPUT 1 -o lo -p tcp -j SLIM
           '';
         in
         "+${natUp}";
@@ -76,9 +83,13 @@ in
           natDown = pkgs.writeScript "slim-nat-down" ''
             #!${pkgs.bash}/bin/bash
             IPT="${pkgs.iptables}/bin/iptables"
+            IP6T="${pkgs.iptables}/bin/ip6tables"
             $IPT -t nat -D OUTPUT -o lo -p tcp -j SLIM 2>/dev/null || true
             $IPT -t nat -F SLIM 2>/dev/null || true
             $IPT -t nat -X SLIM 2>/dev/null || true
+            $IP6T -t nat -D OUTPUT -o lo -p tcp -j SLIM 2>/dev/null || true
+            $IP6T -t nat -F SLIM 2>/dev/null || true
+            $IP6T -t nat -X SLIM 2>/dev/null || true
           '';
         in
         "+${natDown}";

@@ -1,0 +1,66 @@
+#!/usr/bin/env sh
+set -eu
+
+state_dir="${XDG_RUNTIME_DIR:-/tmp}/niri-game-mode"
+state_file="$state_dir/enabled"
+positions_file="$state_dir/output-positions.tsv"
+
+enabled() {
+    [ -e "$state_file" ]
+}
+
+notify() {
+    command -v notify-send >/dev/null 2>&1 || return 0
+    notify-send -a niri "Niri game mode" "$1" -t 1200 || true
+}
+
+restore_output_positions() {
+    [ -s "$positions_file" ] || return 0
+
+    while IFS="$(printf '\t')" read -r name x y _width _height; do
+        niri msg output "$name" position set -- "$x" "$y" >/dev/null || true
+    done < "$positions_file"
+}
+
+case "${1:-status}" in
+    on)
+        if enabled; then
+            notify "Already enabled"
+            exit 0
+        fi
+        mkdir -p "$state_dir"
+        : > "$state_file"
+        notify "Game shortcuts blocked"
+        ;;
+    off)
+        restore_output_positions || true
+        rm -f "$state_file"
+        rm -f "$positions_file"
+        notify "Game shortcuts restored"
+        ;;
+    toggle)
+        if enabled; then
+            "$0" off
+        else
+            "$0" on
+        fi
+        ;;
+    status)
+        if enabled; then
+            echo on
+        else
+            echo off
+        fi
+        ;;
+    run)
+        shift
+        if enabled; then
+            exit 0
+        fi
+        exec "$@"
+        ;;
+    *)
+        echo "Usage: $0 {on|off|toggle|status|run COMMAND...}" >&2
+        exit 64
+        ;;
+esac

@@ -69,7 +69,7 @@
       bun
 
       # Android development
-      # android-tools
+      android-tools
       # javaPackages.compiler.temurin-bin.jre-25
 
       # Debugging

@@ -1,0 +1,410 @@
+[accessibility]
+ui_scale = 1.0
+high_contrast = false
+
+[shell]
+corner_radius_scale = 1.0
+button_borders = false
+font_family = "Noto Sans"
+time_format = "{:%I:%M %p}"
+date_format = "%A, %x"
+telemetry_enabled = false
+setup_wizard_enabled = false
+polkit_agent = false
+settings_show_advanced = false
+show_location = true
+avatar_path = "~/.face"
+clipboard_enabled = true
+clipboard_history_max_entries = 100
+clipboard_confirm_clear_history = true
+clipboard_auto_paste = "off"
+screen_time_enabled = false
+
+[shell.animation]
+enabled = true
+speed = 1.2
+
+[shell.shadow]
+direction = "down_right"
+alpha = 0.55
+
+[shell.panel]
+transparency_mode = "solid"
+borders = false
+shadow = false
+launcher_placement = "floating"
+launcher_position = "center"
+clipboard_placement = "floating"
+clipboard_position = "center"
+control_center_placement = "attached"
+session_placement = "floating"
+session_position = "center"
+open_near_click_control_center = true
+
+[shell.launcher]
+categories = true
+show_icons = true
+compact = false
+app_grid = false
+sort_by_usage = true
+provider_prefix = "/"
+
+[shell.launcher.providers.session]
+prefix = "session"
+global = true
+
+[shell.launcher.providers.windows]
+prefix = "win"
+global = true
+
+[shell.mpris]
+blacklist = []
+
+[shell.screenshot]
+save_to_file = true
+copy_to_clipboard = false
+freeze_screen = true
+confirm_region = false
+
+[shell.privacy]
+mic_filter_regex = ""
+cam_filter_regex = ""
+screen_filter_regex = ""
+
+[[shell.session.actions]]
+action = "lock"
+enabled = true
+shortcut = "1"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "suspend"
+enabled = true
+shortcut = "2"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "lock_and_suspend"
+enabled = true
+shortcut = "3"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "reboot"
+enabled = true
+shortcut = "4"
+countdown_seconds = 10
+variant = "destructive"
+
+[[shell.session.actions]]
+action = "logout"
+enabled = true
+shortcut = "5"
+countdown_seconds = 10
+
+[[shell.session.actions]]
+action = "shutdown"
+enabled = true
+shortcut = "6"
+countdown_seconds = 10
+variant = "destructive"
+
+[lockscreen]
+enabled = true
+fingerprint = false
+blurred_desktop = false
+blur_intensity = 0.53
+tint_intensity = 0.0
+monitors = []
+
+[wallpaper]
+enabled = false
+fill_mode = "crop"
+fill_color = "#000000"
+transition = ["fade", "disc", "stripes", "wipe", "honeycomb"]
+transition_duration = 1500
+edge_smoothness = 0.05
+transition_on_startup = false
+directory = "~/Pictures/Wallpapers"
+
+[wallpaper.automation]
+enabled = false
+interval_seconds = 300
+order = "random"
+recursive = true
+
+[backdrop]
+enabled = false
+blur_intensity = 0.4
+tint_intensity = 0.6
+
+[theme]
+mode = "dark"
+source = "custom"
+custom_palette = "SystemConf"
+wallpaper_scheme = "m3-monochrome"
+pure_black_dark = false
+
+[theme.templates]
+enable_builtin_templates = false
+enable_community_templates = false
+
+[notification]
+enable_daemon = true
+show_app_name = true
+show_actions = true
+position = "top_right"
+layer = "overlay"
+background_opacity = 1.0
+collapse_on_dismiss = true
+
+[osd]
+position = "top_right"
+position_vertical = "top_center"
+orientation = "horizontal"
+background_opacity = 1.0
+border = true
+
+[osd.kinds]
+volume = true
+volume_output = true
+volume_input = true
+brightness = true
+wifi = true
+bluetooth = true
+power_profile = true
+caffeine = true
+nightlight = true
+dnd = true
+lock_keys = true
+keyboard_layout = false
+media = false
+privacy = true
+
+[system.monitor]
+enabled = true
+gpu_poll_seconds = 0.0
+cpu_usage_activity_threshold = 80
+cpu_usage_critical_threshold = 90
+cpu_temp_activity_threshold = 80
+cpu_temp_critical_threshold = 90
+gpu_temp_activity_threshold = 80
+gpu_temp_critical_threshold = 90
+ram_pct_activity_threshold = 90
+ram_pct_critical_threshold = 90
+swap_pct_activity_threshold = 90
+swap_pct_critical_threshold = 90
+disk_pct_activity_threshold = 80
+disk_pct_critical_threshold = 90
+
+[weather]
+enabled = true
+refresh_minutes = 30
+unit = "metric"
+effects = true
+
+[calendar]
+enabled = false
+
+[audio]
+enable_overdrive = true
+enable_sounds = false
+sound_volume = 0.5
+
+[brightness]
+enable_ddcutil = false
+minimum_brightness = 0.0
+
+[battery]
+warning_threshold = 20
+
+[nightlight]
+enabled = true
+force = true
+temperature_day = 6500
+temperature_night = 5040
+
+[location]
+auto_locate = false
+address = "Giza"
+custom_schedule = true
+sunrise = "06:30"
+sunset = "18:30"
+
+[idle]
+pre_action_fade_seconds = 5.0
+
+[idle.behavior.lock]
+enabled = false
+timeout = 660
+action = "lock"
+
+[idle.behavior.screen-off]
+enabled = false
+timeout = 600
+action = "screen_off"
+
+[keybinds]
+validate = ["return", "kp_enter"]
+cancel = ["escape"]
+left = ["left"]
+right = ["right"]
+up = ["up"]
+down = ["down"]
+tab_next = ["tab"]
+tab_previous = ["shift+iso_left_tab"]
+
+[bar.main]
+enabled = true
+position = "top"
+auto_hide = false
+show_on_workspace_switch = true
+reserve_space = true
+layer = "top"
+thickness = 34
+background_opacity = 0.84
+border_width = 0.0
+radius = 12
+margin_ends = 4
+margin_edge = 4
+padding = 8
+widget_spacing = 6
+shadow = false
+scale = 1.0
+capsule = true
+capsule_fill = "surface_variant"
+capsule_opacity = 1.0
+capsule_border = ""
+hover_highlight = true
+start = ["launcher", "workspaces", "clock", "media", "bongocat"]
+center = ["active_window"]
+end = ["tray", "keyboard_layout", "clipboard", "battery", "privacy", "screenshot", "volume", "control-center", "session"]
+
+[dock]
+enabled = true
+position = "bottom"
+active_monitor_only = true
+icon_size = 48
+background_opacity = 1.0
+radius = 16
+margin_ends = 0
+margin_edge = 8
+shadow = false
+show_running = true
+auto_hide = true
+reserve_space = false
+active_scale = 1.0
+inactive_scale = 0.85
+magnification = true
+magnification_scale = 1.45
+active_opacity = 1.0
+inactive_opacity = 0.6
+show_dots = true
+show_instance_count = true
+launcher_position = "none"
+pinned = ["org.gnome.Nautilus", "io.missioncenter.MissionCenter", "steam", "brave-origin-nightly", "com.mitchellh.ghostty", "code"]
+
+[desktop_widgets]
+enabled = false
+
+[control_center]
+sidebar = "compact"
+sidebar_section = "compact"
+
+[[control_center.shortcuts]]
+type = "wifi"
+
+[[control_center.shortcuts]]
+type = "bluetooth"
+
+[[control_center.shortcuts]]
+type = "caffeine"
+
+[[control_center.shortcuts]]
+type = "nightlight"
+
+[[control_center.shortcuts]]
+type = "notification"
+
+[[control_center.shortcuts]]
+type = "power_profile"
+
+[plugins]
+enabled = ["noctalia/screen_recorder", "noctalia/bongocat"]
+auto_update = false
+
+[widget.launcher]
+glyph = "rocket"
+
+[widget.workspaces]
+hide_when_empty = false
+display = "none"
+labels_only_when_occupied = true
+max_label_chars = 2
+style = "regular"
+pill_scale = 0.6
+focused_output_only = false
+focused_color = "primary"
+occupied_color = "secondary"
+empty_color = "secondary"
+
+[widget.clock]
+format = "{:%I:%M %p - %b %d}"
+vertical_format = "{:%I:%M %p}"
+tooltip_format = "{:%H:%M %a, %b %d}"
+
+[widget.media]
+max_length = 300
+title_scroll = "on_hover"
+hide_when_no_media = false
+
+[widget.bongocat]
+type = "noctalia/bongocat:cat"
+input_devices = ["/dev/input/by-id/keyd-virtual-keyboard-event*"]
+executable_path = "/run/current-system/sw/bin/evtest"
+audio_spectrum = true
+tappy_mode = true
+rave_mode = false
+use_mpris_filter = false
+
+[widget.active_window]
+max_length = 650
+display = "icon_and_text"
+title_scroll = "on_hover"
+
+[widget.tray]
+pinned = ["steam"]
+drawer = true
+
+[widget.keyboard_layout]
+display = "short"
+show_icon = true
+show_label = true
+hide_when_single_layout = false
+
+[widget.battery]
+display_mode = "graphic"
+show_label = true
+hide_when_plugged = false
+hide_when_full = false
+warning_color = "error"
+
+[widget.privacy]
+hide_inactive = false
+icon_spacing = 4
+active_color = "primary"
+inactive_color = "outline"
+
+[widget.screenshot]
+primary_click = "region"
+
+[widget.volume]
+device = "output"
+scroll_step = 5
+show_label = true
+
+[widget.control-center]
+glyph = "noctalia"
+
+[widget.session]
+glyph = "shutdown"

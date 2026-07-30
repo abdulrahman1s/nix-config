@@ -16,87 +16,21 @@ verify-store:
     nix-store --verify --check-contents
 
 
-# Show free btrfs storage on /
+# Show the compact colored storage dashboard
 free:
-   @just storage
+    @zsh -f -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update-storage --compact'
 
-# Show free btrfs storage on /
+# Alias for `os free`
+space: free
+
+# Guarded flake update, build, diff, and activation
+update:
+    @zsh -f -i -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update'
+
+# Diagnose Btrfs, Nix, containers, logs, caches, and user data
 storage:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    mount=/
-    usage=$(btrfs fi usage --raw "$mount" 2>/dev/null)
-
-    size=$(awk '/Device size:/{print $3; exit}' <<<"$usage")
-    unalloc=$(awk '/Device unallocated:/{print $3; exit}' <<<"$usage")
-    used=$(awk '$1 == "Used:" { print $2; exit }' <<<"$usage")
-    free_est=$(awk '/Free \(estimated\):/{print $3; exit}' <<<"$usage")
-    df_free=$(awk '/Free \(statfs, df\):/{print $4; exit}' <<<"$usage")
-
-    if [[ -z "$size" || -z "$unalloc" || -z "$used" || -z "$free_est" || -z "$df_free" ]]; then
-        echo "Could not parse btrfs usage for $mount" >&2
-        exit 1
-    fi
-
-    if [ -t 1 ] && command -v tput >/dev/null; then
-        bold=$(tput bold 2>/dev/null || true)
-        dim=$(tput dim 2>/dev/null || true)
-        red=$(tput setaf 1 2>/dev/null || true)
-        green=$(tput setaf 2 2>/dev/null || true)
-        yellow=$(tput setaf 3 2>/dev/null || true)
-        blue=$(tput setaf 4 2>/dev/null || true)
-        reset=$(tput sgr0 2>/dev/null || true)
-    else
-        bold=
-        dim=
-        red=
-        green=
-        yellow=
-        blue=
-        reset=
-    fi
-
-    gb() {
-        awk -v bytes="$1" 'BEGIN { printf "%.1f GB", bytes / 1000 / 1000 / 1000 }'
-    }
-
-    bar() {
-        awk -v pct="$1" -v good="$2" -v warn="$3" -v bad="$4" -v reset="$5" 'BEGIN {
-            width = 24
-            filled = int((pct * width / 100) + 0.5)
-            color = pct >= 90 ? bad : pct >= 75 ? warn : good
-            printf "["
-            for (i = 1; i <= width; i++) {
-                if (i == 1) {
-                    printf color
-                }
-                printf i <= filled ? "#" : "-"
-            }
-            printf reset "]"
-        }'
-    }
-
-    reclaimable=$((free_est - unalloc))
-    if [ "$reclaimable" -lt 0 ]; then
-        reclaimable=0
-    fi
-
-    used_pct=$(((used * 100 + size / 2) / size))
-    used_color=$green
-    if [ "$used_pct" -ge 90 ]; then
-        used_color=$red
-    elif [ "$used_pct" -ge 75 ]; then
-        used_color=$yellow
-    fi
-
-    printf '\n%sBtrfs storage:%s %s\n' "$bold" "$reset" "$mount"
-    printf '%s %s%d%%%s used\n\n' "$(bar "$used_pct" "$green" "$yellow" "$red" "$reset")" "$used_color" "$used_pct" "$reset"
-    printf '  %s%-14s%s %12s\n' "$green" "Free" "$reset" "$(gb "$free_est")"
-    printf '  %s%-14s%s %12s\n' "$dim" "DF/statfs" "$reset" "$(gb "$df_free")"
-    printf '  %s%-14s%s %12s\n' "$blue" "Unallocated" "$reset" "$(gb "$unalloc")"
-    printf '  %s%-14s%s %12s\n' "$yellow" "Reclaimable" "$reset" "$(gb "$reclaimable")"
-    printf '  %s%-14s%s %12s / %s\n' "$used_color" "Used" "$reset" "$(gb "$used")" "$(gb "$size")"
+    @sudo -v
+    @zsh -f -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update-storage'
 
 # Re-link dotfiles into ~/.config/ without a full rebuild
 link:
@@ -113,130 +47,9 @@ logs-this-boot:
 logs-last-boot:
     journalctl -b -1 --no-hostname
 
-# Garbage Collect (Free space)
-clean:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    bytes_free() {
-        df --output=avail -B1 / | awk 'NR == 2 { print $1 }'
-    }
-
-    separator() {
-        printf '%*s\n' 72 '' | tr ' ' '-'
-    }
-
-    format_bytes() {
-        local bytes="$1"
-        awk -v bytes="$bytes" 'BEGIN {
-            split("B KB MB GB TB", units)
-            value = bytes
-            unit = 1
-            while (value >= 1000 && unit < 5) {
-                value /= 1000
-                unit++
-            }
-            if (unit == 1) {
-                printf "%d %s", bytes, units[unit]
-            } else {
-                printf "%.1f %s", value, units[unit]
-            }
-        }'
-    }
-
-    format_delta() {
-        local delta="$1"
-        if (( delta >= 0 )); then
-            printf '+%s' "$(format_bytes "$delta")"
-        else
-            printf -- '-%s' "$(format_bytes "$((-delta))")"
-        fi
-    }
-
-    run_step() {
-        local label="$1"
-        shift
-
-        local before after delta status
-        printf '\n'
-        separator
-        printf '%s\n' "$label"
-        separator
-
-        before=$(bytes_free)
-        if "$@"; then
-            status=0
-        else
-            status=$?
-        fi
-        after=$(bytes_free)
-        delta=$((after - before))
-
-        step_names+=("$label")
-        step_deltas+=("$delta")
-        step_statuses+=("$status")
-
-        if (( delta >= 0 )); then
-            printf '\nFreed: %s\n' "$(format_bytes "$delta")"
-        else
-            printf '\nUsed: %s\n' "$(format_bytes "$((-delta))")"
-        fi
-        if (( status == 0 )); then
-            printf 'Status: ok\n'
-        else
-            printf 'Status: failed (exit %d)\n' "$status"
-        fi
-        return "$status"
-    }
-
-    clean_coredumps() {
-        if [[ -d /var/lib/systemd/coredump ]]; then
-            sudo find /var/lib/systemd/coredump -type f -delete
-        fi
-    }
-
-    print_summary() {
-        local final_free total_delta i status status_text
-        final_free=$(bytes_free 2>/dev/null || printf '%s' "$initial_free")
-        total_delta=$((final_free - initial_free))
-
-        printf '\n'
-        separator
-        printf 'Cleanup summary\n'
-        separator
-        printf '%-32s %14s %10s\n' 'Step' 'Change' 'Status'
-        printf '%-32s %14s %10s\n' '----' '------' '------'
-
-        for i in "${!step_names[@]}"; do
-            status="${step_statuses[$i]}"
-            if (( status == 0 )); then
-                status_text="ok"
-            else
-                status_text="failed:$status"
-            fi
-            printf '%-32s %14s %10s\n' \
-                "${step_names[$i]}" \
-                "$(format_delta "${step_deltas[$i]}")" \
-                "$status_text"
-        done
-
-        printf '%-32s %14s\n' 'Total' "$(format_delta "$total_delta")"
-    }
-
-    step_names=()
-    step_deltas=()
-    step_statuses=()
-
-    initial_free=$(bytes_free)
-    trap 'status=$?; trap - EXIT; print_summary; exit "$status"' EXIT
-
-    run_step "Nix store cleanup" nh clean all
-    run_step "Nix store optimize" nix-store --optimise
-    run_step "Podman prune" podman system prune -f
-    run_step "Coredump cleanup" clean_coredumps
-    run_step "Journal vacuum" sudo journalctl --vacuum-time=7d --vacuum-size=512M
-    run_step "Old system generations" sudo nix-collect-garbage -d
-    run_step "Btrfs balance" just --justfile "$HOME/system-conf/config/justfile" balance
+# Preview-first targeted cleanup. Bare `os clean` is help-only.
+clean target="":
+    @zsh -f -c 'source "$HOME/system-conf/config/zsh/update.zsh"; storage-clean "$1"' -- {{quote(target)}}
 
 
 # Reclaim btrfs allocated-but-unused chunks; stops once `target_pct` of the device is unallocated
