@@ -8,8 +8,7 @@ let
     { domain = "homeassistant"; port = 8123; }
     { domain = "homebridge"; port = 8581; }
     { domain = "logging"; port = 7777; }
-    { domain = "radio"; port = 4444; }
-    { domain = "dokploy"; port = 3000; }
+    { domain = "vr"; port = 9999; }
     {
       domain = "minecraft";
       port = 3001;

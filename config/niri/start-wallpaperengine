@@ -15,6 +15,16 @@ active_outputs() {
   printf '%s\n' "$parsed" | sort
 }
 
+wallpaper_outputs() {
+  json="$(niri msg --json layers 2>/dev/null)" || return 1
+  parsed="$(
+    printf '%s\n' "$json" \
+      | jq -r '.[] | select(.namespace == "linux-wallpaperengine") | .output' 2>/dev/null
+  )" || return 1
+
+  printf '%s\n' "$parsed" | sort -u
+}
+
 stop_wallpaperengine() {
   [ -n "$engine_pid" ] || return 0
   kill "$engine_pid" 2>/dev/null || true
@@ -26,6 +36,7 @@ start_wallpaperengine() {
   set -- \
     --fps 30 \
     --clamp clamp \
+    --layer background \
     --silent
 
   while IFS= read -r output; do
@@ -59,11 +70,17 @@ trap 'cleanup; exit 0' INT TERM
 trap cleanup EXIT
 
 while :; do
-  if next_outputs="$(active_outputs)" && [ "$next_outputs" != "$outputs" ]; then
-    outputs="$next_outputs"
-    if [ -n "$outputs" ]; then
-      restart_wallpaperengine
-    else
+  if next_outputs="$(active_outputs)"; then
+    if [ -n "$next_outputs" ]; then
+      next_wallpaper_outputs="$(wallpaper_outputs)" || next_wallpaper_outputs=""
+      if [ "$next_outputs" != "$outputs" ] \
+        || [ "$next_wallpaper_outputs" != "$next_outputs" ] \
+        || ! kill -0 "$engine_pid" 2>/dev/null; then
+        outputs="$next_outputs"
+        restart_wallpaperengine
+      fi
+    elif [ -n "$outputs" ]; then
+      outputs=""
       stop_wallpaperengine
     fi
   fi

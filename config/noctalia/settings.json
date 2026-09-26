@@ -428,9 +428,9 @@
             "org.gnome.Nautilus",
             "io.missioncenter.MissionCenter",
             "steam",
-            "brave-origin-nightly",
+            "com.sandboxed.brave",
             "com.mitchellh.ghostty",
-            "code"
+            "dev.zed.Zed"
         ],
         "pinnedStatic": false,
         "position": "bottom",

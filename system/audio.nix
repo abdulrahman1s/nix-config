@@ -2,7 +2,7 @@
 { pkgs, username, ... }:
 
 let
-  sampleRate = 44100; # mirrored in services/radio.nix (liquidsoap samplerate)
+  sampleRate = 44100;
 in
 {
   # ── PipeWire ─────────────────────────────────────────────
@@ -42,7 +42,9 @@ in
             { "node.name" = "alsa_output.pci-0000_0a_00.1.hdmi-stereo-extra1"; }
           ];
           actions.update-props = {
-            "priority.session" = 50000;
+            # Prefer HDMI over the unused S/PDIF sink (736) while allowing
+            # connected Bluetooth A2DP sinks (1010) to become the default.
+            "priority.session" = 900;
           };
         }
       ];

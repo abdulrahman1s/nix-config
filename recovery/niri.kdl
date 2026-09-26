@@ -1,0 +1,9 @@
+// Minimal recovery layout: the repair tools remain available without relying
+// on the main system's monitor names, application services, or dotfiles.
+spawn-at-startup "noctalia"
+
+include "/etc/nixos-recovery/niri/binds.kdl"
+
+layout {
+    gaps 8
+}

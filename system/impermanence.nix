@@ -103,17 +103,11 @@ in
       "/var/lib/bluetooth"
       # Containers / virtualisation
       "/var/lib/docker"
-      "/var/lib/dokploy"
       "/var/lib/containers"
       "/var/lib/libvirt"
       "/var/lib/minepanel" # panel database, Minecraft servers, worlds, and backups
       # Sandboxed Brave private profile (host path)
       "/var/lib/brave-private"
-      # Flake-defined service state
-      "/var/lib/juicefs" # SQLite metadata db (services/juicefs.nix)
-      "/var/cache/juicefs" # cache (rebuildable but large)
-      "/var/lib/liquidsoap" # services/radio.nix StateDirectory
-      "/var/lib/remote-control" # LAN HTTPS certificate and private key
       # Journal
       "/var/log"
     ];
@@ -131,14 +125,19 @@ in
     users.${username} = {
       directories = [
         "system-conf" # the flake repo — explicitly kept
+        "AI" # portable public/private personal AI memory
         ".ssh"
         ".cargo"
         ".rustup"
         ".codex"
         ".claude"
+        ".local/bin" # user-installed launchers, including the Blender MCP server
+        ".local/share/uv/tools/blender-mcp" # official Blender MCP Python environment
         "projects"
         ".anydesk"
+        ".config/blender" # Blender preferences and Blender Lab MCP extension
         ".config/BraveSoftware" # browser profile (logins, cookies, history)
+        ".local/share/umu"
         ".local/share/atuin"
         ".local/share/zoxide"
         ".local/state/ghostty"
@@ -146,6 +145,9 @@ in
         ".npm-global"
         ".bun"
         "Downloads"
+        "Inbox" # AI-assisted universal document inbox
+        "Documents" # organized receipts, invoices, and personal documents
+        "Books"
         "Pictures"
         "Local"
         "Games"
@@ -155,8 +157,13 @@ in
         ".local/share/Steam" # gaming module enabled; large (games, library, login)
         ".steam" # Steam locator symlinks + registry.vdf/token; small, complements Steam above
         ".config/Signal"
+        ".config/xbvr" # database, metadata, indexes, previews, and downloads
         ".config/Code"
+        ".config/opencode" # config, plugins, and global agent instructions
+        ".local/share/opencode" # credentials, session database, logs, and snapshots
+        ".local/state/opencode" # prompt history and model selection
         ".config/zed"
+        ".local/share/zed" # project trust, workspace state, extensions, and agent data
         ".npm"
         ".cache/ghfs"
         ".cache/qsh"
@@ -178,6 +185,10 @@ in
         #    pre-wipe backup snapshot into /persist. Each line notes what broke.
         ".config/dconf" # GTK/GNOME settings — theme, fonts, dark mode (without it nautilus renders light/unreadable)
         ".config/noctalia" # shell: declarative v5 config/palettes plus any hand-installed local config
+        {
+          directory = ".config/AirPodsTrayApp"; # LibrePods remembered device and feature settings
+          mode = "0700";
+        }
         ".local/state/noctalia" # shell: GUI overrides, plugin source caches, runtime state
         ".local/share/noctalia" # shell: local v5 plugins
         ".cache/noctalia"

@@ -1,5 +1,9 @@
 # Bluetooth (Realtek RTL8761BU USB radio).
-{ pkgs, ... }:
+{ pkgs, username, ... }:
+
+let
+  librepods = pkgs.callPackage ../local-packages/librepods-noctalia.nix { };
+in
 
 {
   hardware.bluetooth = {
@@ -29,6 +33,53 @@
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${pkgs.util-linux}/bin/rfkill unblock bluetooth";
+    };
+  };
+
+  # Native by necessity: this daemon talks to BlueZ and publishes AirPods state
+  # for the Noctalia plugin; it is not a standalone GUI application here.
+  users.users.${username}.packages = [ librepods ];
+
+  systemd.user.services.librepods = {
+    description = "LibrePods AirPods daemon for Noctalia";
+    wantedBy = [ "graphical-session.target" ];
+    after = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    environment.QT_LOGGING_RULES = "openpods.debug=false";
+
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${librepods}/bin/librepods --headless";
+      Restart = "on-failure";
+      RestartSec = 5;
+      UMask = "0077";
+
+      StateDirectory = "librepods";
+      StateDirectoryMode = "0700";
+      ConfigurationDirectory = "AirPodsTrayApp";
+      ConfigurationDirectoryMode = "0700";
+
+      ProtectSystem = "strict";
+      ProtectHome = "read-only";
+      ReadWritePaths = [ "%t" ];
+      PrivateTmp = true;
+      NoNewPrivileges = true;
+      CapabilityBoundingSet = "";
+      RestrictSUIDSGID = true;
+      RestrictNamespaces = true;
+      LockPersonality = true;
+      SystemCallArchitectures = "native";
+      ProtectKernelTunables = true;
+      ProtectKernelModules = true;
+      ProtectKernelLogs = true;
+      ProtectControlGroups = true;
+      ProtectClock = true;
+      ProtectHostname = true;
+      RestrictAddressFamilies = [
+        "AF_UNIX"
+        "AF_BLUETOOTH"
+        "AF_NETLINK"
+      ];
     };
   };
 }

@@ -1,19 +1,5 @@
 { pkgs, username, fullName, email, ... }: {
 
-  # virtualisation.docker = {
-  #   enable = true;
-  #   storageDriver = "btrfs";
-  #   daemon.settings = {
-  #     # This registers the "nvidia" runtime so the --gpus flag works
-  #     runtimes = {
-  #       nvidia = {
-  #         path = "${pkgs.nvidia-container-toolkit}/bin/nvidia-container-runtime";
-  #       };
-  #     };
-  #   };
-  # };
-
-
   virtualisation.podman = {
     enable = true;
     # dockerCompat = true;
@@ -55,14 +41,17 @@
     subGidRanges = [{ startGid = 100000; count = 1000000; }];
     packages = with pkgs; [
       # Editors
-      vscode
       zed-editor
 
       # Container tools
       lazydocker
 
       # Build tools
-      # gnumake
+      gnumake
+      git-lfs
+      pkg-config
+      stdenv.cc
+      mold
 
       # Web development
       nodejs_24
@@ -70,26 +59,18 @@
 
       # Android development
       android-tools
-      # javaPackages.compiler.temurin-bin.jre-25
 
-      # Debugging
-      # insomnia
+      # Python development
+      (python3.withPackages (pythonPackages: [ pythonPackages.pip ]))
 
       # Nix tooling
-      python3
-      distrobox
       nixpkgs-fmt
-      nil # Nix LSP
+      nixd # Nix LSP with NixOS option completion
       nix-prefetch-github
       nvd
 
-      # ETC
+      # Other development tools
       onefetch
-
-
-      stdenv.cc
-      mold
-
     ];
   };
 

@@ -1,4 +1,4 @@
-{ pkgs, username, fullName, lib, ... }:
+{ config, pkgs, username, fullName, lib, ... }:
 
 {
   imports =
@@ -10,8 +10,8 @@
       # Feature modules
       ./modules/gaming.nix
       ./modules/development.nix
+      ./modules/ai
       ./modules/ios.nix
-      ./modules/ai.nix
       ./modules/remote-control.nix
       ./modules/niri-dynamic-float.nix
       ./modules/vicinae.nix
@@ -24,12 +24,14 @@
       ./system/security.nix
       ./system/optimization.nix
       ./system/impermanence.nix
+      ./system/recovery.nix
       ./system/users.nix
 
       # Terminal & shell
       ./terminal/shell.nix
       ./terminal/packages.nix
       ./terminal/dotfiles.nix
+      ./terminal/skills.nix
       ./terminal/ghostty.nix
 
       # Sandboxed applications
@@ -48,13 +50,11 @@
       "https://cache.nixos.org" # fallback when the Cloudflare proxy is unavailable
       "https://cache.nixos-cuda.org"
       "https://attic.xuyh0120.win/lantian"
-      "https://cache.garnix.io"
       "https://noctalia.cachix.org"
     ];
     trusted-public-keys = [
       "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
       "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
-      "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
       "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
     ];
     http-connections = 50;
@@ -89,6 +89,15 @@
       "docker"
       "openrazer"
     ];
+  };
+
+  personal-ai = {
+    enable = true;
+    cloud = {
+      fastModel = "openrouter/auto";
+      strongModel = "openrouter/auto";
+      environmentFile = config.age.secrets.personal-ai-cloud-env.path;
+    };
   };
 
     services.tailscale.enable = true;

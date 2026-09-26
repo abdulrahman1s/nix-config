@@ -1,0 +1,48 @@
+name: Update maintained packages
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+      - name: Update upstream binaries
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 nix-packages/update.py
+      - name: Update source based packages
+        run: nix flake update nixpkgs-packages noctalia
+      - name: Build maintained packages
+        run: |
+          nix build \
+            .#packages.x86_64-linux.codex \
+            .#packages.x86_64-linux.claude-code \
+            .#packages.x86_64-linux.brave-origin \
+            .#packages.x86_64-linux.noctalia \
+            .#packages.x86_64-linux.niri \
+            --no-link --no-update-lock-file
+      - name: Evaluate NixOS system
+        run: nix eval --raw .#nixosConfigurations.default.config.system.build.toplevel.drvPath --no-update-lock-file
+      - name: Commit passing updates
+        run: |
+          git add -- nix-packages/versions.json flake.lock
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Update maintained Nix packages'
+          git push

@@ -1,12 +1,12 @@
 # Performance, storage, and general system optimizations.
-{ pkgs, ... }:
+{ inputs, pkgs, ... }:
 
 let
   # ── Sysctl tunables (grouped by subsystem) ───────────────
   memSysctl = {
     # zram-only swap: high swappiness is safe — zram is in-RAM compression
     # so there's no I/O penalty; a low value wastes allocated zram capacity.
-    "vm.swappiness" = 100;
+    "vm.swappiness" = 150;
     # Disable swap readahead: zram has no seek penalty.
     "vm.page-cluster" = 0;
     # Reclaim dentries/inodes more aggressively (default 100).
@@ -61,21 +61,33 @@ in
     };
   };
 
+  # The pinned CachyOS overlay evaluates against its own nixpkgs source. It is
+  # otherwise build-only and weekly/low-space GC removes it, forcing every
+  # later evaluation to download the same ~40 MiB archive again.
+  system.extraDependencies = [
+    inputs.nix-cachyos-kernel.inputs.nixpkgs.outPath
+  ];
+
   # ── Kernel / Boot ───────────────────────────────────────
   boot = {
     kernel.sysctl = memSysctl // netSysctl // fsSysctl // miscSysctl;
-    kernelParams = [ "transparent_hugepage=madvise" ]; # Hugepages only when apps opt in
+    kernelModules = [ "ntsync" ]; # Native NT synchronization for modern Wine/Proton.
+    kernelParams = [
+      "transparent_hugepage=madvise" # Hugepages only when apps opt in.
+      "zswap.enabled=0" # Avoid stacking zswap in front of the zram swap device.
+    ];
     tmp = {
       useTmpfs = true; # /tmp in RAM — avoids SSD writes, speeds up builds
-      tmpfsSize = "50%"; # Leaves headroom; zram (75%) is the real safety net under pressure.
+      tmpfsSize = "50%"; # Leaves headroom; zram is the real safety net under pressure.
     };
   };
 
   # ── zram (compressed swap in RAM) ───────────────────────
   zramSwap = {
     enable = true;
-    memoryPercent = 75;
+    memoryPercent = 100;
     algorithm = "zstd";
+    priority = 100;
   };
 
   # ── Services ────────────────────────────────────────────

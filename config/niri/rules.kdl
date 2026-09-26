@@ -1,6 +1,6 @@
 window-rule {
     match app-id=r#"^brave-browser$"#
-    match app-id=r#"^brave-origin-nightly$"#
+    match app-id=r#"^brave-origin$"#
     match app-id=r#"^firefox$"#
     open-on-workspace "main"
 }
@@ -14,7 +14,7 @@ window-rule {
 
 window-rule {
     match app-id=r#"^brave-browser$"#
-    match app-id=r#"^brave-origin-nightly$"#
+    match app-id=r#"^brave-origin$"#
     match app-id=r#"^code$"#
     match app-id=r#"^brave-youtube\.com__-.*$"#
     match app-id=r#"^vlc$"#
@@ -95,7 +95,7 @@ window-rule {
 
 window-rule {
     match app-id=r#"^brave-browser$"# title="DevTools"
-    match app-id=r#"^brave-origin-nightly$"# title="DevTools"
+    match app-id=r#"^brave-origin$"# title="DevTools"
     default-floating-position x=60 y=40 relative-to="bottom-right"
     opacity 0.9
     default-column-width { proportion 0.4; }
@@ -111,10 +111,20 @@ window-rule {
     draw-border-with-background false
 }
 
+// Hide the empty Rockstar launcher window in installed Rockstar games.
 window-rule {
-    match app-id=r#"^steam_app_1174180$"# title=r#"^$"#
-    open-floating false
+    match app-id=r#"^steam_app_(12210|1174180|1546990|12140)$"# title=r#"^$"# is-floating=true
     open-focused false
+    opacity 0.0
+    shadow {
+        off
+    }
+    focus-ring {
+        off
+    }
+    border {
+        off
+    }
 }
 
 window-rule {
@@ -165,16 +175,9 @@ window-rule {
     }
 }
 
-// Set the Noctalia overview wallpaper on the backdrop.
-layer-rule {
-    match namespace="^noctalia-overview*"
-    place-within-backdrop true
-}
 
-// Live wallpaper (linux-wallpaperengine) is forced onto the wlr *background*
-// layer via `--layer background` (wrapped in system/graphics.nix). Fold it into
-// niri's backdrop so it is not cloned into every overview workspace card.
-layer-rule {
-    match namespace="^linux-wallpaperengine$"
-    place-within-backdrop true
+
+overview {
+  // Choose your favorite color.
+  backdrop-color "#00000062"
 }

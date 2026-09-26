@@ -123,6 +123,7 @@ in
       # Editor
       vim = "nvim";
       v = "nvim";
+      code = "zeditor --existing";
 
       # Open image(s) in loupe
       see = "loupe";
@@ -130,6 +131,7 @@ in
       # Listing (eza — maintained exa fork)
       ls = "eza -la --icons --no-permissions --no-user --git --time-style=long-iso --sort=modified";
       claudex = "claude --dangerously-skip-permissions";
+      codexx = "codex --sandbox danger-full-access --ask-for-approval never";
       tree = "eza --tree --icons";
 
       # File operations
@@ -278,8 +280,6 @@ in
           source "$GHOSTTY_RESOURCES_DIR"/shell-integration/zsh/ghostty-integration
       fi
 
-      # ── VS Code terminal integration ─────────────────────
-      [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path zsh)"
     '';
   };
 }

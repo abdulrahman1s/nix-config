@@ -801,6 +801,7 @@ update() {
   local btrfs_activation_floor=$((12 * 1024 * 1024 * 1024))
   local boot_floor=$((256 * 1024 * 1024))
   local root_free btrfs_min boot_free answer build_pid="" build_status dirty_count
+  local activation_action candidate_nvidia_module candidate_nvidia_version loaded_nvidia_version
 
   while (( $# )); do
     case "$1" in
@@ -858,9 +859,9 @@ update() {
     return 1
   }
 
-  trap '_smart_update_cleanup $?' EXIT
-  trap 'return 130' INT
-  trap 'return 143' TERM HUP
+  {
+    trap 'return 130' INT
+    trap 'return 143' TERM HUP
 
   root_free=$(_smart_update_free_bytes /)
   btrfs_min=$(_smart_update_btrfs_min_bytes)
@@ -976,6 +977,31 @@ update() {
   printf '\nCandidate: %s\n' "$candidate_path"
   printf 'Free after build: %s\n' "$(_smart_update_format_bytes "$root_free")"
 
+  activation_action=switch
+  loaded_nvidia_version=""
+  candidate_nvidia_version=""
+  if [[ -r /sys/module/nvidia/version ]] && command -v modinfo >/dev/null; then
+    IFS= read -r loaded_nvidia_version < /sys/module/nvidia/version
+    candidate_nvidia_module=$(find -L \
+      "$candidate_path/kernel-modules/lib/modules" \
+      -type f \( -name 'nvidia.ko' -o -name 'nvidia.ko.xz' -o -name 'nvidia.ko.zst' \) \
+      -print -quit 2>/dev/null)
+    if [[ -n "$candidate_nvidia_module" ]]; then
+      candidate_nvidia_version=$(modinfo -F version "$candidate_nvidia_module" 2>/dev/null)
+    fi
+  fi
+
+  # NVIDIA userspace cannot talk to a different loaded kernel-module version.
+  # Install the new closure as the boot default without disrupting the working
+  # daemon; the matching module is loaded by the next boot.
+  if [[ -n "$loaded_nvidia_version" && -n "$candidate_nvidia_version" && \
+    "$loaded_nvidia_version" != "$candidate_nvidia_version" ]]; then
+    activation_action=boot
+    print
+    print -r -- "NVIDIA driver changed: $loaded_nvidia_version -> $candidate_nvidia_version"
+    print -r -- "The candidate will be installed for next boot instead of live-switched."
+  fi
+
   if (( ! assume_yes )); then
     if [[ ! -t 0 || ! -t 1 ]]; then
       print -u2 -- "update: non-interactive shell; candidate was built but not activated"
@@ -983,7 +1009,11 @@ update() {
       restore_lock=0
       return 0
     fi
-    printf 'Activate this exact pre-built system now? [y/N] '
+    if [[ "$activation_action" == boot ]]; then
+      printf 'Install this exact pre-built system for next boot? [y/N] '
+    else
+      printf 'Activate this exact pre-built system now? [y/N] '
+    fi
     IFS= read -r answer
     if [[ "$answer" != [yY] ]]; then
       print -r -- "Not activated. Candidate retained at $candidate"
@@ -995,8 +1025,12 @@ update() {
   # From this point onward the lock file describes the closure being activated;
   # do not roll it back even if activation itself reports an error.
   restore_lock=0
-  print -r -- "Activating the already-built closure..."
-  if ! sudo nixos-rebuild switch --store-path "$candidate_path"; then
+  if [[ "$activation_action" == boot ]]; then
+    print -r -- "Installing the already-built closure for next boot..."
+  else
+    print -r -- "Activating the already-built closure..."
+  fi
+  if ! sudo nixos-rebuild "$activation_action" --no-reexec --store-path "$candidate_path"; then
     print -u2 -- "update: activation failed; candidate retained at $candidate"
     return 1
   fi
@@ -1004,5 +1038,13 @@ update() {
   command rm -f -- "$candidate"
   root_free=$(_smart_update_free_bytes /)
   print
-  print -r -- "Update complete. Root free: $(_smart_update_format_bytes "$root_free")"
+  if [[ "$activation_action" == boot ]]; then
+    print -r -- "Update installed for next boot. Reboot to load NVIDIA $candidate_nvidia_version."
+    print -r -- "Root free: $(_smart_update_format_bytes "$root_free")"
+  else
+    print -r -- "Update complete. Root free: $(_smart_update_format_bytes "$root_free")"
+  fi
+  } always {
+    _smart_update_cleanup $?
+  }
 }

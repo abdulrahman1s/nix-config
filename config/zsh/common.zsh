@@ -1,5 +1,17 @@
 # ── Shell Functions ──────────────────────────────────
 
+# Guard the interactive command against accidental reboots.
+reboot() {
+  if read -q "REPLY?Reboot the PC now? [y/N] "; then
+    print
+    command reboot "$@"
+  else
+    print
+    print "Reboot cancelled."
+    return 1
+  fi
+}
+
 # Cheat-sheet lookup: `what tar extract`
 what() {
   curl -s "cheat.sh/$(printf '%s' "$*" | tr ' ' '+')"

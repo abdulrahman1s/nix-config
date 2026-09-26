@@ -9,7 +9,7 @@ let
   #   width   — optional; set the floating window width in logical pixels
   #   height  — optional; set the floating window height in logical pixels
   rules = [
-    { app_id = "^brave-origin-nightly$"; title = "^DevTools - "; width = 900; height = 1000; }
+    { app_id = "^brave-origin$"; title = "^DevTools - "; width = 900; height = 1000; }
     { app_id = "^brave-"; title = "^Bitwarden$"; width = 610; height = 787; }
   ];
 

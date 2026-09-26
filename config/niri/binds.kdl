@@ -6,18 +6,19 @@ binds {
 
     Mod+X hotkey-overlay-title="Open a Terminal " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus 'ghostty +new-window' --id com.mitchellh.ghostty"; }
     Mod+Shift+X hotkey-overlay-title="Cycle Terminals " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus ghostty --id com.mitchellh.ghostty --focus-existing"; }
-    Mod+B hotkey-overlay-title="Open a Browser " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus brave --id brave-origin-nightly --toggle-previous --focus-existing"; }
+    Mod+B hotkey-overlay-title="Open a Browser " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus brave --id brave-origin --toggle-previous --focus-existing"; }
     Mod+Shift+B hotkey-overlay-title="Open a Firefox " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus firefox --id firefox --focus-existing"; }
     Mod+N hotkey-overlay-title="Open a FileManager " repeat=false { spawn "nautilus" "-w"; }
     Mod+Space hotkey-overlay-title="Open Launcher" repeat=false { spawn "vicinae" "toggle"; }
-    // Ctrl+Space hotkey-overlay-title="Toggle Handy Transcription" repeat=false { spawn "handy" "--toggle-transcription"; }
+    Ctrl+Space hotkey-overlay-title="Toggle Handy Transcription" repeat=false { spawn "handy" "--toggle-transcription"; }
     Mod+S hotkey-overlay-title="Screenshot Region" repeat=false { screenshot; }
     Mod+Shift+S hotkey-overlay-title="Screenshot Full Screen" repeat=false { screenshot-screen; }
     Mod+P hotkey-overlay-title="Open Mission Center " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus missioncenter --id io.missioncenter.MissionCenter --toggle-previous --focus-existing"; }
     Mod+V hotkey-overlay-title="Open Clipboard " repeat=false  { spawn "vicinae" "vicinae://launch/clipboard/history"; }
     Mod+E hotkey-overlay-title="Open Emoji Picker " repeat=false  { spawn "vicinae" "vicinae://launch/core/search-emojis"; }
+    Mod+A hotkey-overlay-title="AI Workflows" repeat=false { spawn "vicinae" "cmd" "launch" "@abdulrahman/personal-ai:workflows"; }
 
-    
+
     Mod+M repeat=false hotkey-overlay-title="Open YT Music (Webapp)" { spawn-sh "~/.config/niri/niri-launch-or-focus-webapp music.youtube.com"; }
     Mod+Y repeat=false hotkey-overlay-title="Open YouTube (Webapp)" { spawn-sh "~/.config/niri/niri-launch-or-focus-webapp youtube.com"; }
     Mod+Shift+E repeat=false { expand-column-to-available-width; }
@@ -29,6 +30,7 @@ binds {
     Mod+Ctrl+G hotkey-overlay-title="Toggle Game Mode" allow-inhibiting=false repeat=false { spawn-sh "~/.config/niri/game-mode toggle"; }
 
     // ─── Window Management ───
+    Mod+Escape repeat=false { close-window; }
     Mod+Q repeat=false { close-window; }
     Mod+T repeat=false { toggle-window-floating; }
     Mod+D hotkey-overlay-title="Peek floating window to a bottom corner" repeat=false { spawn-sh "~/.config/niri/peek-floating-window"; }
@@ -78,7 +80,7 @@ binds {
 
     Mod+Comma  { consume-or-expel-window-left; }
     Mod+Period { consume-or-expel-window-right; }
-    
+
     Mod+WheelScrollDown  cooldown-ms=150  { spawn-sh "~/.config/niri/game-mode run ~/.config/niri/focus-column right"; }
     Mod+WheelScrollUp    cooldown-ms=150  { spawn-sh "~/.config/niri/game-mode run ~/.config/niri/focus-column left"; }
     Shift+WheelScrollDown cooldown-ms=150 { spawn-sh "~/.config/niri/game-mode run niri msg action focus-workspace-down"; }
@@ -101,5 +103,4 @@ binds {
     // ─── Power / Quit ───
     Mod+Shift+P repeat=false { power-off-monitors; }
     Ctrl+Alt+Delete repeat=false { quit; }
-    Mod+Escape allow-inhibiting=false repeat=false { toggle-keyboard-shortcuts-inhibit; }
 }

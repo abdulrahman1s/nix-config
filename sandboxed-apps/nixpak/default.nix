@@ -7,8 +7,8 @@
 #   - newSession (TIOCSTI protection)
 #   - dieWithParent (cleanup on parent exit)
 #   - Dummy machine-id (anti-fingerprinting)
-#   - Read-only: fonts, SSL certs, D-Bus socket, icons, localtime, os-release,
-#                resolv.conf, hosts
+#   - Read-only: fonts, complete system trust store, D-Bus socket, icons,
+#                localtime, os-release, resolv.conf, hosts
 #   - Read-write: XDG_RUNTIME_DIR, ~/.config/<configDir>
 #
 # The wayland preset additionally provides (read-only):
@@ -86,6 +86,17 @@ let
 
   # Anti-fingerprinting: all sandboxed apps see a zeroed machine-id
   dummyMachineId = pkgs.writeText "machine-id" "00000000000000000000000000000000\n";
+
+  # NixOS' compatibility names in /etc/ssl/certs are absolute symlinks into
+  # /etc/static/ssl/certs. Bind both directories: exposing only the first one
+  # leaves GLib/GnuTLS with zero trusted certificates after it follows the
+  # symlink, while binding all of /etc/static would disclose unrelated system
+  # configuration. Keeping this in the base sandbox also preserves custom CAs
+  # added through security.pki for every current and future sandboxed app.
+  systemTrustPaths = [
+    "/etc/ssl/certs"
+    "/etc/static/ssl/certs"
+  ];
 
   mkSandboxed =
     { package
@@ -285,6 +296,12 @@ let
               "/dev/nvidia-modeset"
               "/dev/nvidia-uvm"
               "/dev/nvidia-uvm-tools"
+              # NVIDIA exposes restricted driver capabilities through this
+              # directory. Omitting it can leave libmpv with working audio but
+              # a black video surface; upstream Stremio fixed the same symptom
+              # by widening its Flatpak to --device=all. Keep our preset narrow
+              # while forwarding the missing NVIDIA capability nodes.
+              "/dev/nvidia-caps"
             ];
 
             ro = [
@@ -493,7 +510,7 @@ let
                     "/etc/hosts" # Hostname resolution
 
                     "/etc/fonts"
-                    "/etc/ssl/certs"
+                  ] ++ systemTrustPaths ++ [
                     "/run/dbus"
                     (mkHomeBindEntry sloth "/.icons")
                   ];
@@ -656,5 +673,5 @@ let
       '';
 in
 {
-  inherit mkPathBindingLauncher mkSandboxed mkPrivateUserSandbox;
+  inherit mkPathBindingLauncher mkSandboxed mkPrivateUserSandbox systemTrustPaths;
 }

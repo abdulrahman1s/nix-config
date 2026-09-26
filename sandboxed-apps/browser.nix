@@ -1,8 +1,7 @@
 { pkgs, utils, sandboxedXdgUtils, inputs, username, ... }:
 
 let
-  braveOriginNightly =
-    inputs.brave-previews.packages.${pkgs.stdenv.hostPlatform.system}.brave-origin-nightly;
+  braveOrigin = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.brave-origin;
 
   chromiumWaylandArgs = [
     "--enable-features=UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks"
@@ -19,6 +18,7 @@ let
     , configDir ? "BraveSoftware/Brave-Origin-Nightly"
     , exportDesktopFiles ? true
     , extraBinNames ? [ ]
+    , wmClass ? null
     , resourceLimits ? null
     , userDataDir ? null
     , extraBraveArgs ? [ ]
@@ -44,7 +44,7 @@ let
       # every sandbox instance shares the ProcessSingleton dir.
       wrappedBrave = pkgs.writeShellScriptBin name ''
         ${pkgs.coreutils}/bin/mkdir -p "$TMPDIR"
-        exec ${braveOriginNightly}/bin/brave-origin-nightly \
+        exec ${braveOrigin}/bin/brave-origin \
           ${
             if userDataDir == null then
               ''--user-data-dir="$HOME/.config/${configDir}"''
@@ -62,7 +62,7 @@ let
         name = "brave-wrapped-${name}";
         paths = [ wrappedBrave ];
         postBuild = ''
-          ln -s ${braveOriginNightly}/share $out/share
+          ln -s ${braveOrigin}/share $out/share
         '';
       };
 
@@ -73,6 +73,7 @@ let
           configDir
           exportDesktopFiles
           extraBinNames
+          wmClass
           presets
           ;
         package = bravePackage;
@@ -113,6 +114,7 @@ let
     name = "brave";
     displayName = "Brave (Secure)";
     configDir = "BraveSoftware/Brave-Origin-Nightly";
+    wmClass = "brave-origin";
   };
 
   hostProfile = "/home/${username}/.config/BraveSoftware/Brave-Origin-Nightly";
@@ -153,7 +155,7 @@ in
 
         if [ -d "$legacy_src" ] && [ ! -e "$marker" ]; then
           if ${pkgs.procps}/bin/pgrep -u ${username} -x brave >/dev/null \
-            || ${pkgs.procps}/bin/pgrep -u ${username} -f '(^|/)brave-origin-nightly( |$)' >/dev/null; then
+            || ${pkgs.procps}/bin/pgrep -u ${username} -f '(^|/)brave-origin( |$)' >/dev/null; then
             echo "brave profile data migration: Brave is running; close it and rebuild again to copy cookies/history safely."
           else
             if [ -d "$dst" ] && [ ! -e "$backup" ]; then

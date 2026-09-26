@@ -1,0 +1,14 @@
+{
+  "codex": {
+    "version": "0.157.1",
+    "hash": "sha256-6YwejgKOgTf6LSQVyC7Fjns3AaYn41VKrOWzyjFFSvI="
+  },
+  "claude": {
+    "version": "2.1.283",
+    "sha256": "1859583ce32920595c61ef868bee52e1b1594f7486db209935e01f1e5e804ae2"
+  },
+  "brave-origin": {
+    "version": "1.96.59",
+    "hash": "sha256-RHvFrEsqK/pxJgzfnVLS+raU9Z4VpLmpB5gPWz7EVhM="
+  }
+}

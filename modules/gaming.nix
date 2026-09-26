@@ -92,66 +92,12 @@ in
   hardware.i2c.enable = true; # Enable I2C support
   
 
-  services.hardware.openrgb = let
-    openrgbAulaF75 = pkgs.openrgb.overrideAttrs (_: {
-      version = "1.0rc2-unstable-2026-07-09";
-      src = pkgs.fetchFromGitLab {
-        owner = "CalcProgrammer1";
-        repo = "OpenRGB";
-        rev = "b833a43490a7c7c85fd6cd0fb09dd7d734504671";
-        hash = "sha256-K1GaViybuKg+eRXcrv/Q1gdFVA1H8Tvs4y16xzfXqTk=";
-      };
-      patches = [
-        (pkgs.path + "/pkgs/by-name/op/openrgb/system-plugins-env.patch")
-      ];
-    });
-    openrgbEffectsApi5 = pkgs.openrgb-plugin-effects.overrideAttrs (_: {
-      version = "unstable-2026-07-07";
-      src = pkgs.fetchFromGitLab {
-        owner = "OpenRGBDevelopers";
-        repo = "OpenRGBEffectsPlugin";
-        rev = "f9dc7312aa2097360144c4b7d6971bb2cf13d0f6";
-        hash = "sha256-udObEA7081UZSZJLwyKsHPthmTu5cAGDcaEOE0hqLpE=";
-        fetchSubmodules = true;
-      };
-    });
-    openrgbHardwareSyncApi5 = pkgs.openrgb-plugin-hardwaresync.overrideAttrs (_: {
-      version = "unstable-2026-07-07";
-      src = pkgs.fetchFromGitLab {
-        owner = "OpenRGBDevelopers";
-        repo = "OpenRGBHardwareSyncPlugin";
-        rev = "46189c4656f38af4c6d3a51c6fefa42dd4fa367d";
-        hash = "sha256-oqFHGVNAhSL+Gli9DfaqI0IAFalCtImAuM7Aaq8NVnU=";
-        fetchSubmodules = true;
-      };
-    });
-    openrgbVisualMapApi5 = pkgs.stdenv.mkDerivation {
-      pname = "openrgb-plugin-visualmap";
-      version = "unstable-2026-07-07";
-      src = pkgs.fetchFromGitLab {
-        owner = "OpenRGBDevelopers";
-        repo = "OpenRGBVisualMapPlugin";
-        rev = "84accb0b833d4d9c7a51311cf848113b0d0de3c4";
-        hash = "sha256-P6TskKsNwGQxoA1AKME24P1qMiRgW+zGP8xHVV1J2vQ=";
-        fetchSubmodules = true;
-      };
-      nativeBuildInputs = with pkgs; [
-        pkg-config
-        qt6Packages.qmake
-        qt6Packages.wrapQtAppsHook
-      ];
-      buildInputs = [
-        pkgs.qt6Packages.qtbase
-      ];
-    };
-  in {
+  services.hardware.openrgb = {
     enable = true;
     motherboard = "amd";
-    package = openrgbAulaF75.withPlugins [
-      openrgbEffectsApi5
-      openrgbHardwareSyncApi5
-      openrgbVisualMapApi5
-    ];
+    # Use the binary-cached nixpkgs build; the custom OpenRGB revision and
+    # API-pinned plugin builds made ordinary system updates compile OpenRGB.
+    package = pkgs.openrgb;
   };
 
   systemd.services.openrgb.restartTriggers = [ aulaF75RgbMonitor ];

@@ -15,6 +15,14 @@ shutdown:
 verify-store:
     nix-store --verify --check-contents
 
+# Check the live system closure against the NVD vulnerability database.
+# Vulnix uses name/version matching, so findings require human verification.
+vulnerabilities:
+    vulnix --system
+
+# Short alias for `os vulnerabilities`
+audit: vulnerabilities
+
 
 # Show the compact colored storage dashboard
 free:
@@ -26,6 +34,13 @@ space: free
 # Guarded flake update, build, diff, and activation
 update:
     @zsh -f -i -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update'
+
+# Rebuild the frozen lock file without advancing system packages
+rebuild:
+    @zsh -f -i -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update --no-input-update'
+
+# Explicit name for advancing the locked package set
+upgrade: update
 
 # Diagnose Btrfs, Nix, containers, logs, caches, and user data
 storage:

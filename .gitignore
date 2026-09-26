@@ -15,9 +15,13 @@ secrets/*
 *.p12
 *.pfx
 credentials.json
+backups/
+*.log
 
 # Local agent state
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 
 
 # Editor and OS noise

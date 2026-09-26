@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Remote control HTTPS server for NixOS + Niri.
+"""Remote control HTTP server for NixOS + Niri.
 
 Endpoints:
   GET  /ping        — health check
@@ -12,7 +12,7 @@ Endpoints:
   POST /shutdown    — power off
   POST /reboot      — reboot
 
-Auth: Bearer token via Authorization header.
+Auth: Raw token via Authorization header.
 The token is supplied through systemd credentials.
 """
 
@@ -22,7 +22,6 @@ import json
 import pwd
 import os
 import socketserver
-import ssl
 import subprocess
 import tempfile
 import threading
@@ -38,22 +37,9 @@ class BoundedThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPSe
     daemon_threads = True
     request_queue_size = MAX_REQUEST_THREADS
 
-    def __init__(self, *args, tls_context, **kwargs):
-        self._tls_context = tls_context
+    def __init__(self, *args, **kwargs):
         self._request_slots = threading.BoundedSemaphore(MAX_REQUEST_THREADS)
         super().__init__(*args, **kwargs)
-
-    def get_request(self):
-        connection, address = super().get_request()
-        connection.settimeout(REQUEST_TIMEOUT_SECONDS)
-        try:
-            return self._tls_context.wrap_socket(
-                connection,
-                server_side=True,
-            ), address
-        except BaseException:
-            connection.close()
-            raise
 
     def process_request(self, request, client_address):
         self._request_slots.acquire()
@@ -122,8 +108,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.connection.settimeout(REQUEST_TIMEOUT_SECONDS)
 
     def _check_auth(self):
-        expected = f"Bearer {TOKEN}"
-        if not hmac.compare_digest(self.headers.get("Authorization", ""), expected):
+        if not hmac.compare_digest(self.headers.get("Authorization", ""), TOKEN):
             self._json(401, {"error": "unauthorized"})
             return False
         return True
@@ -379,14 +364,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    tls.minimum_version = ssl.TLSVersion.TLSv1_2
-    tls.load_cert_chain("@certificatePath@", "@privateKeyPath@")
-
     srv = BoundedThreadingHTTPServer(
         ("@lanAddress@", PORT),
         Handler,
-        tls_context=tls,
     )
-    print(f"remote-control listening on https://@lanAddress@:{PORT}")
+    print(f"remote-control listening on http://@lanAddress@:{PORT}")
     srv.serve_forever()

@@ -1,7 +1,6 @@
 prefer-no-csd
 
-spawn-at-startup "dbus-update-activation-environment" "--systemd" "--all"
-spawn-at-startup "noctalia"
+spawn-at-startup "sh" "-c" "dbus-update-activation-environment --systemd --all && systemctl --user start noctalia.service"
 spawn-at-startup "sh" "-c" "exec sh \"$HOME/.config/niri/start-wallpaperengine\""
 spawn-at-startup "vicinae" "server"
 spawn-at-startup "nautilus" "--gapplication-service"

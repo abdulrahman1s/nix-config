@@ -59,6 +59,7 @@
     tree # Lists directories in a visual tree format
     usbutils # USB device tools (provides 'lsusb')
     pciutils # PCI device tools (provides 'lspci')
+    vulnix # Checks the live system closure against published CVEs
 
     # ── Miscellaneous & Fun ────────────────────────────────
     blobdrop # Drag-and-drop files directly from the terminal

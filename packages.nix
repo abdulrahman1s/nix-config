@@ -1,8 +1,5 @@
-{ pkgs, username, ... }:
+{ inputs, pkgs, username, ... }:
 
-let
-  frameGui = pkgs.callPackage ./local-packages/frame.nix { };
-in
 {
 
 
@@ -20,20 +17,20 @@ in
   virtualisation.libvirtd.enable = true;
   programs.virt-manager.enable = true;
 
-
+  programs.coolercontrol.enable = true;
 
   # ── User Packages ─────────────────────────────────────────
   users.users.${username} = {
     extraGroups = [ "plugdev" ];
     packages = (with pkgs; [
+      # chatgpt
+      blender
+      inputs.self.packages.${pkgs.system}.codex
+      inputs.self.packages.${pkgs.system}.claude-code
       wtype
+      opencode
       handy
-
       hcxtools
-      #   (hashcat.override {
-      #    cudaSupport = true;
-      #  })
-
       kiwix
       # mosquitto
 
@@ -44,7 +41,6 @@ in
       # hashcat-utils
       # wifite2
 
-
       # Internet & Communication
       qbittorrent
 
@@ -52,20 +48,18 @@ in
       vlc
       loupe # GNOME image viewer (native, unsandboxed by request)
 
+      scrcpy
 
       # Tools
       ethtool
-      scrcpy
       just
       nh
+      rtk
 
 
       waycorner # hot-corner daemon for Wayland
       signal-desktop
-    ]) ++ [
-      # Native by request; this repo normally sandboxes GUI apps.
-      frameGui
-    ];
+    ]);
   };
 
   users.groups.plugdev = { };

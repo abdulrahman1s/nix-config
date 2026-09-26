@@ -1,4 +1,4 @@
-{ pkgs, lib, username, ... }:
+{ config, pkgs, lib, username, ... }:
 
 let
   extensionsRepo = pkgs.fetchFromGitHub {
@@ -67,7 +67,19 @@ let
       }
     );
 
-  extensions = {
+  extensions = (lib.optionalAttrs config.personal-ai.enable {
+    personal-ai = mkVicinaeExtension {
+      pname = "vicinae-extension-personal-ai";
+      src = ../config/vicinae/extensions/personal-ai;
+      npmDeps = pkgs.importNpmLock { npmRoot = "${extensionsRepo}/extensions/stocks"; };
+      postPatch = ''
+        cp ${extensionsRepo}/extensions/stocks/assets/extension_icon.png extension_icon.png
+        substituteInPlace src/runner.ts \
+          --replace-fail '@personalAiWorkflowRunner@' '${config.personal-ai.workflowRunner}'
+      '';
+    };
+
+  }) // {
     stocks = mkVicinaeExtension {
       pname = "vicinae-extension-stocks";
       src = "${extensionsRepo}/extensions/stocks";

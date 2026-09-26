@@ -32,6 +32,8 @@ utils.mkSandboxed {
         rw = [
           # /home/abdulrahman/Games/umu/umu-default
           (sloth.concat' sloth.homeDir "/.local/share/umu")
+          # Preserve partial SteamRT downloads so interrupted updates can resume.
+          (sloth.concat' sloth.homeDir "/.cache/umu")
           (sloth.concat' sloth.homeDir "/.local/share/Steam/compatibilitytools.d")
           (sloth.concat' sloth.homeDir "/.config/protonfixes")
           (sloth.concat' sloth.homeDir "/Games/umu")
