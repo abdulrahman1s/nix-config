@@ -1,7 +1,7 @@
 {
   "codex": {
-    "version": "0.157.1",
-    "hash": "sha256-6YwejgKOgTf6LSQVyC7Fjns3AaYn41VKrOWzyjFFSvI="
+    "version": "0.158.0",
+    "hash": "sha256-r59apuZmKsz51wfO8NnKCDiAoXOpwrbCKUftt4MOV3g="
   },
   "claude": {
     "version": "2.1.283",
