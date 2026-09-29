@@ -1,11 +1,11 @@
 {
   "codex": {
-    "version": "0.158.0",
-    "hash": "sha256-r59apuZmKsz51wfO8NnKCDiAoXOpwrbCKUftt4MOV3g="
+    "version": "0.159.0",
+    "hash": "sha256-blh6CMs5WZgWxZiwfhe0vL+dQbXBwHk6S2MrZ0Hpy8A="
   },
   "claude": {
-    "version": "2.1.283",
-    "sha256": "1859583ce32920595c61ef868bee52e1b1594f7486db209935e01f1e5e804ae2"
+    "version": "2.1.284",
+    "sha256": "5cd90aabd83f8a15136c35aa37bb1d92b348993573316643dc3fe4e04afbf88f"
   },
   "brave-origin": {
     "version": "1.96.59",
