@@ -4,11 +4,11 @@
     "hash": "sha256-MGhlQX1O56kneFhSkQpSf0Hh4Vmt05CsWuOsy2fUShM="
   },
   "claude": {
-    "version": "2.1.287",
-    "sha256": "3920489a5109cff5786a1a392c25277408ff22bc796d5edb9c16a60e5a1718f0"
+    "version": "2.1.288",
+    "sha256": "0298068b686e7fdbaf9402a7a587bb7f49c0b0e084de09f69145a0719207640c"
   },
   "brave-origin": {
-    "version": "1.96.60",
-    "hash": "sha256-y3LGzovJcrxOQt6zKfQiRU6FvJOptRB15X2pqdulslk="
+    "version": "1.96.61",
+    "hash": "sha256-MMsS1PWZNFnB+1m/M8cgyaovh5/TQvDsTkwlQAeuqCg="
   }
 }
