@@ -147,4 +147,18 @@ in
     # This module causes OpenRGB to not detect RAM.
     "ee1004"
   ];
+
+  # SteamVR creates visible URI-handler entries without an Icon field. Repair
+  # them after installation and whenever Steam recreates them.
+  system.userActivationScripts.steamvr-desktop-icons.text = ''
+    for desktopEntry in \
+      "$HOME/.local/share/applications/valve-vrmonitor.desktop" \
+      "$HOME/.local/share/applications/valve-URI-vrmonitor.desktop"; do
+      [ -f "$desktopEntry" ] || continue
+      if ! ${pkgs.gnugrep}/bin/grep -q '^Icon=' "$desktopEntry"; then
+        ${pkgs.gnused}/bin/sed -i '/^Type=Application$/a Icon=steam' "$desktopEntry"
+      fi
+    done
+  '';
+
 }

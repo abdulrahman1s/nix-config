@@ -1,7 +1,33 @@
-{ pkgs, utils, sandboxedXdgUtils, inputs, username, ... }:
+{ pkgs, utils, sandboxedXdgUtils, inputs, username, config, ... }:
 
 let
   braveOrigin = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.brave-origin;
+  warpHosts = config.services.cloudflare-warp-proxy.braveHosts;
+  warpVersion = (builtins.fromJSON (builtins.readFile ../config/brave-warp-extension/manifest.json)).version;
+
+  warpBackground = pkgs.writeText "background.js" (
+    builtins.replaceStrings
+      [ "@WARP_HOSTS@" ]
+      [ (builtins.toJSON warpHosts) ]
+      (builtins.readFile ../config/brave-warp-extension/background.js.in)
+  );
+  warpBuildInfo = pkgs.writeText "build.js" ''
+    globalThis.warpBuild = ${builtins.toJSON { version = warpVersion; hosts = warpHosts; }};
+  '';
+  warpExtension = pkgs.runCommandLocal "brave-warp-extension"
+    { nativeBuildInputs = [ pkgs.librsvg ]; } ''
+    mkdir -p "$out"
+    cp ${../config/brave-warp-extension/manifest.json} "$out/manifest.json"
+    cp ${warpBackground} "$out/background.js"
+    cp ${warpBuildInfo} "$out/build.js"
+    cp ${../config/brave-warp-extension/popup.html} "$out/popup.html"
+    cp ${../config/brave-warp-extension/popup.css} "$out/popup.css"
+    cp ${../config/brave-warp-extension/popup.js} "$out/popup.js"
+    for size in 16 32 48 128; do
+      rsvg-convert -w "$size" -h "$size" \
+        ${../config/brave-warp-extension/icon.svg} -o "$out/icon-$size.png"
+    done
+  '';
 
   chromiumWaylandArgs = [
     "--enable-features=UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks"
@@ -87,6 +113,9 @@ let
           # BraveSoftware parent (impermanence-persisted, so it always exists at
           # bind time) rather than the leaf, which may not exist on a fresh boot.
           { suffix = "/.cache/BraveSoftware"; }
+          # Reuse the persisted fontconfig index instead of rescanning fonts
+          # inside each short-lived browser sandbox.
+          { suffix = "/.cache/fontconfig"; }
           { suffix = "/.local/share/applications"; }
           { suffix = "/.local/share/icons"; }
           { suffix = "/.config/mimeapps.list"; perms = "rw"; }
@@ -103,6 +132,9 @@ let
         { sloth, ... }:
         {
           bubblewrap.env.TMPDIR = sloth.concat' sloth.runtimeDir "/${name}-singleton-tmp";
+          bubblewrap.bind.ro = pkgs.lib.optionals (name == "brave") [
+            "/etc/brave-warp-extension"
+          ];
         };
     in
     utils.mkSandboxed (sandboxArgs // {
@@ -115,6 +147,12 @@ let
     displayName = "Brave (Secure)";
     configDir = "BraveSoftware/Brave-Origin-Nightly";
     wmClass = "brave-origin";
+    extraBraveArgs = [
+      "--load-extension=/etc/brave-warp-extension"
+      # Browser Use connects only through the loopback DevTools endpoint.
+      "--remote-debugging-address=127.0.0.1"
+      "--remote-debugging-port=9222"
+    ];
   };
 
   hostProfile = "/home/${username}/.config/BraveSoftware/Brave-Origin-Nightly";
@@ -125,6 +163,8 @@ in
   packages = [ brave ];
 
   module = {
+    environment.etc."brave-warp-extension".source = warpExtension;
+
     system.activationScripts.brave-host-profile-migration = {
       deps = [ "users" ];
       text = ''

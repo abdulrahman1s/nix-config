@@ -65,6 +65,11 @@ in
       };
     };
     xdg.config.files = themeFiles // repoFiles // {
+      "user-dirs.dirs".text = ''
+        XDG_DOCUMENTS_DIR="$HOME/Documents"
+        XDG_DOWNLOAD_DIR="$HOME/Downloads"
+        XDG_PICTURES_DIR="$HOME/Pictures"
+      '';
       "noctalia/plugins/linux-wallpaperengine-controller".type = "delete";
       "opencode/AGENTS.md".source = rtkSkill;
       # Migrate the existing mutable Zed settings into this repository.

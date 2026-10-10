@@ -1,4 +1,5 @@
 {
+  "cli_default_open_behavior": "existing_window",
   "base_keymap": "VSCode",
   "auto_install_extensions": {
     "kdl": true,

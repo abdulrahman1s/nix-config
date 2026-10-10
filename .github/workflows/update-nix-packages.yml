@@ -22,13 +22,17 @@ jobs:
       - name: Update upstream binaries
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python3 nix-packages/update.py
+        run: bash nix-packages/update.sh
       - name: Update source based packages
-        run: nix flake update nixpkgs-packages noctalia
+        run: nix flake update noctalia
       - name: Build maintained packages
         run: |
           nix build \
             .#packages.x86_64-linux.codex \
+            .#packages.x86_64-linux.chatgpt \
+            .#packages.x86_64-linux.photocraft \
+            .#packages.x86_64-linux.filmcraft \
+            .#packages.x86_64-linux.sklauncher \
             .#packages.x86_64-linux.claude-code \
             .#packages.x86_64-linux.brave-origin \
             .#packages.x86_64-linux.noctalia \

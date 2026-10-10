@@ -37,6 +37,15 @@ stdenv.mkDerivation {
     qt6.qttools
   ];
 
+  # These AirPods lose their audio transport with SBC-XQ, which LibrePods
+  # otherwise chooses by bitrate. Prefer their working AAC profile when present.
+  postPatch = ''
+    substituteInPlace media/mediacontroller.cpp \
+      --replace-fail \
+      'm_cachedA2dpProfile = bestPlaybackProfile(profiles);' \
+      'm_cachedA2dpProfile = m_pulseAudio->isProfileAvailable(m_deviceOutputName, "a2dp-sink") ? "a2dp-sink" : bestPlaybackProfile(profiles);'
+  '';
+
   cmakeFlags = [
     (lib.cmakeBool "BUILD_TESTING" false)
     (lib.cmakeFeature "CMAKE_INSTALL_BINDIR" "bin")

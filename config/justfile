@@ -31,8 +31,8 @@ free:
 # Alias for `os free`
 space: free
 
-# Guarded flake update, build, diff, and activation
-update:
+# Guarded full flake update, build, diff, and activation
+update-system:
     @zsh -f -i -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update'
 
 # Rebuild the frozen lock file without advancing system packages
@@ -40,7 +40,13 @@ rebuild:
     @zsh -f -i -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update --no-input-update'
 
 # Explicit name for advancing the locked package set
-upgrade: update
+upgrade: update-system
+
+# Refresh maintained package pins and their dedicated inputs, then rebuild
+update:
+    @bash "$HOME/system-conf/nix-packages/update.sh"
+    @cd "$HOME/system-conf" && nix flake update nixpkgs-packages noctalia
+    @zsh -f -i -c 'source "$HOME/system-conf/config/zsh/update.zsh"; update --no-input-update'
 
 # Diagnose Btrfs, Nix, containers, logs, caches, and user data
 storage:

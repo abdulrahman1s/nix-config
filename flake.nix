@@ -18,7 +18,6 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    nixpkgs-packages.url = "github:nixos/nixpkgs/nixos-unstable";
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
     agenix = {
@@ -64,8 +63,7 @@
       system = "x86_64-linux";
       userArgs = import ./specialArgs.nix;
       pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
-      niriPkgs = import inputs.nixpkgs-packages { inherit system; };
-      maintainedPackages = import ./nix-packages { inherit pkgs inputs niriPkgs; };
+      maintainedPackages = import ./nix-packages { inherit pkgs inputs; };
       recoverySystem = self.nixosConfigurations.recovery.config.system.build.toplevel;
       recoveryDiskoScript = self.nixosConfigurations.recovery.config.system.build.diskoScript;
       recoveryDiskoUnmountScript = self.nixosConfigurations.recovery.config.system.build.unmount;
@@ -126,7 +124,7 @@
       };
 
       packages.${system} = {
-        inherit (maintainedPackages) codex claude-code brave-origin noctalia niri;
+        inherit (maintainedPackages) codex chatgpt photocraft filmcraft sklauncher claude-code brave-origin noctalia niri;
         recovery-partition = recoveryPartition;
         recovery-update = recoveryUpdate;
       };

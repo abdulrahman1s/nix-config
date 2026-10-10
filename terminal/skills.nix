@@ -38,6 +38,12 @@ let
       rev = "063bee94c3f4df8453406c830b0a7df0f2860278";
       hash = "sha256-tTSJf53OQltUfxTH4hdqcnw5ywCjCZP8/JqQ593cyB8=";
     };
+    browser-use = pkgs.fetchFromGitHub {
+      owner = "browser-use";
+      repo = "browser-use";
+      rev = "4cbe921673b48a488f5415d9159249afd12a625b";
+      hash = "sha256-rkLZ0SsvHvjegCUaCZMxOFUONVd159oRuyQ7zJtFuIQ=";
+    };
   };
 
   skills = {
@@ -48,6 +54,7 @@ let
     frontend-design = "${repositories.anthropics}/skills/frontend-design";
     vercel-react-best-practices = "${repositories.vercel-agent-skills}/skills/react-best-practices";
     web-design-guidelines = "${repositories.vercel-agent-skills}/skills/web-design-guidelines";
+    browser-use = "${repositories.browser-use}/skills/browser-use";
   };
 
   agentFiles = builtins.listToAttrs (lib.concatMap

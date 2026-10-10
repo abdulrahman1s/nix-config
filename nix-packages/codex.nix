@@ -4,7 +4,7 @@ stdenvNoCC.mkDerivation {
   inherit (codex) version;
 
   src = fetchurl {
-    url = "https://github.com/openai/codex/releases/download/rust-v${codex.version}/codex-x86_64-unknown-linux-musl.tar.gz";
+    url = "https://github.com/openai/codex/releases/download/rust-v${codex.version}/codex-package-x86_64-unknown-linux-musl.tar.gz";
     hash = codex.hash;
   };
 
@@ -12,7 +12,9 @@ stdenvNoCC.mkDerivation {
   dontBuild = true;
   installPhase = ''
     runHook preInstall
-    install -Dm755 codex-x86_64-unknown-linux-musl $out/bin/codex
+    mkdir -p $out
+    cp -R . $out/
+    ln -s bin/codex $out/codex
     runHook postInstall
   '';
 

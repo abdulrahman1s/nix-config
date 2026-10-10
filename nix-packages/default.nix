@@ -1,4 +1,4 @@
-{ pkgs, inputs, niriPkgs }:
+{ pkgs, inputs }:
 let
   system = pkgs.stdenv.hostPlatform.system;
   versions = builtins.fromJSON (builtins.readFile ./versions.json);
@@ -6,6 +6,22 @@ in
 {
   codex = pkgs.callPackage ./codex.nix {
     inherit (versions) codex;
+  };
+
+  chatgpt = pkgs.callPackage ./chatgpt.nix {
+    inherit (versions) chatgpt;
+  };
+
+  photocraft = pkgs.callPackage ./photocraft.nix {
+    inherit (versions) photocraft;
+  };
+
+  filmcraft = pkgs.callPackage ./filmcraft.nix {
+    inherit (versions) filmcraft;
+  };
+
+  sklauncher = pkgs.callPackage ./sklauncher.nix {
+    inherit (versions) sklauncher;
   };
 
   claude-code = pkgs.claude-code.override {
@@ -23,9 +39,8 @@ in
     };
   });
 
-  noctalia = inputs.noctalia.packages.${system}.default;
-  niri =
-    if pkgs.lib.versionOlder pkgs.niri.version niriPkgs.niri.version
-    then niriPkgs.niri
-    else pkgs.niri;
+  noctalia = inputs.noctalia.packages.${system}.default.overrideAttrs (old: {
+    patches = (old.patches or [ ]) ++ [ ./noctalia-bar-hide-delay.patch ];
+  });
+  niri = pkgs.niri;
 }

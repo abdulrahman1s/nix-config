@@ -1,4 +1,4 @@
-{ config, pkgs, lib, username, ... }:
+{ pkgs, lib, username, ... }:
 
 let
   extensionsRepo = pkgs.fetchFromGitHub {
@@ -67,19 +67,7 @@ let
       }
     );
 
-  extensions = (lib.optionalAttrs config.personal-ai.enable {
-    personal-ai = mkVicinaeExtension {
-      pname = "vicinae-extension-personal-ai";
-      src = ../config/vicinae/extensions/personal-ai;
-      npmDeps = pkgs.importNpmLock { npmRoot = "${extensionsRepo}/extensions/stocks"; };
-      postPatch = ''
-        cp ${extensionsRepo}/extensions/stocks/assets/extension_icon.png extension_icon.png
-        substituteInPlace src/runner.ts \
-          --replace-fail '@personalAiWorkflowRunner@' '${config.personal-ai.workflowRunner}'
-      '';
-    };
-
-  }) // {
+  extensions = {
     stocks = mkVicinaeExtension {
       pname = "vicinae-extension-stocks";
       src = "${extensionsRepo}/extensions/stocks";
@@ -115,6 +103,19 @@ let
   extDir = "/home/${username}/.local/share/vicinae/extensions";
 in
 {
+  # The extension directory persists across boots, so removing its tmpfiles
+  # rule alone leaves the old store symlink installed.
+  system.userActivationScripts.removePersonalAiVicinaeExtension.text = ''
+    extension_link="$HOME/.local/share/vicinae/extensions/personal-ai"
+    if [ -L "$extension_link" ]; then
+      case "$(readlink "$extension_link")" in
+        /nix/store/*-vicinae-extension-personal-ai-*)
+          rm -- "$extension_link"
+          ;;
+      esac
+    fi
+  '';
+
   systemd.tmpfiles.rules =
     [
       "d /home/${username}/.local/share/vicinae 0755 ${username} users -"

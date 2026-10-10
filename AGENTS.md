@@ -70,9 +70,10 @@ Project memory index:
 | `specialArgs.nix` | User, host, identity, and LAN constants |
 | `hardware-configuration.nix` | Generated hardware configuration |
 | `packages.nix` | Native packages and package overrides |
-| `local-packages/<name>.nix` | Non-trivial local package expressions |
+| `local-packages/<name>.nix` | Packages used only by this machine's NixOS modules or sandbox wrappers |
+| `nix-packages/` | Flake-exported packages and their release pins |
 | `services/` | System services, registered in `default.nix` |
-| `modules/` | Features such as AI, gaming, development, and iOS |
+| `modules/` | Features such as desktop, gaming, development, and iOS |
 | `system/` | Audio, graphics, networking, security, optimization, persistence |
 | `terminal/` | Shell, terminal packages, dotfiles, and Ghostty |
 | `config/zsh/` | Zsh functions sourced from `terminal/shell.nix` |
@@ -166,8 +167,10 @@ Use presets first, `homeBinds` for app-specific paths under the user's home, and
    name. Prefer it when suitable.
 2. If the attribute represents different software, create a local package instead
    of changing that unrelated package's version.
-3. Put non-trivial expressions in `local-packages/<name>.nix`, wire them through
-   `packages.nix`, and add the package to `users.users.${username}.packages`.
+3. Put machine-only expressions in `local-packages/<name>.nix`, wire them through
+   `packages.nix` or a sandbox wrapper, and add the package to
+   `users.users.${username}.packages` when installed natively. Put flake-exported
+   derivations in `nix-packages/` beside their version metadata and exports.
 4. Stage required new files, then run the validation below.
 
 For prebuilt releases, use `autoPatchelfHook` for ELF binaries and `makeWrapper`

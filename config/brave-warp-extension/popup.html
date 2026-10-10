@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WARP for selected sites</title>
+    <link rel="stylesheet" href="popup.css">
+    <script src="build.js" defer></script>
+    <script src="popup.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header class="header">
+        <svg class="route-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M7 32V16c0-5 4-9 9-9h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <path d="M24 7h9v9" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M23 7v18c0 4 3 7 7 7h3" stroke="#719188" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 4"/>
+          <circle cx="7" cy="32" r="3" fill="currentColor"/>
+        </svg>
+        <div>
+          <h1>Site routes</h1>
+          <p class="subtitle">Cloudflare WARP for Brave</p>
+        </div>
+      </header>
+
+      <section class="status-card" aria-live="polite">
+        <div class="status-copy">
+          <span id="status-dot" class="status-dot"></span>
+          <div>
+            <strong id="status-title">Checking routing…</strong>
+            <p id="status-detail">Reading Brave proxy settings</p>
+          </div>
+        </div>
+        <button id="reload-extension" type="button" hidden>Reload</button>
+        <label class="switch">
+          <input id="enabled" type="checkbox" role="switch" aria-label="Enable WARP routing" disabled>
+          <span class="switch-track"></span>
+        </label>
+      </section>
+
+      <section class="sites-section">
+        <div class="section-heading">
+          <h2>Routed through WARP</h2>
+          <span id="site-count" class="count">0</span>
+        </div>
+        <ul id="sites" class="sites"></ul>
+        <div class="current-site-row">
+          <div class="current-site-copy">
+            <span>Current site</span>
+            <strong id="current-site">Checking tab…</strong>
+          </div>
+          <button id="add-current-site" type="button" disabled>Route site</button>
+        </div>
+        <div class="defaults-row">
+          <p class="hint">Nix config supplies the starting list. Changes here apply immediately and survive a reboot.</p>
+          <button id="reset-hosts" type="button" disabled>Restore defaults</button>
+        </div>
+      </section>
+
+      <section class="connection">
+        <div>
+          <span class="connection-label">Local proxy</span>
+          <strong>SOCKS5 · 127.0.0.1:40000</strong>
+        </div>
+        <button id="retry" type="button">Retry routing</button>
+      </section>
+
+      <p id="error" class="error" hidden></p>
+      <p class="footer">Brave controls site routing. WARP must be connected separately.</p>
+    </main>
+  </body>
+</html>

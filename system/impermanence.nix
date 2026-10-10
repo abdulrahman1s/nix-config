@@ -98,9 +98,14 @@ in
       "/var/lib/systemd"
       # Networking
       "/etc/NetworkManager/system-connections"
+      "/etc/coolercontrol" # daemon settings and local TLS certificate
       "/var/lib/NetworkManager"
+      "/var/lib/cloudflare-warp" # WARP registration and proxy settings
+      "/var/lib/tailscale" # node identity and login state
       # Bluetooth pairings
       "/var/lib/bluetooth"
+      "/var/lib/coolercontrol" # daemon plugins
+      "/var/lib/OpenRGB" # device detection and server settings
       # Containers / virtualisation
       "/var/lib/docker"
       "/var/lib/containers"
@@ -130,6 +135,18 @@ in
         ".cargo"
         ".rustup"
         ".codex"
+        {
+          directory = ".config/ChatGPT"; # desktop app sign-in and project state
+          mode = "0700";
+        }
+        {
+          directory = ".config/Codex"; # desktop app profile and sign-in
+          mode = "0700";
+        }
+        {
+          directory = ".config/browser-harness"; # browser-use auth, agent workspace, and recordings
+          mode = "0700";
+        }
         ".claude"
         ".local/bin" # user-installed launchers, including the Blender MCP server
         ".local/share/uv/tools/blender-mcp" # official Blender MCP Python environment
@@ -137,10 +154,25 @@ in
         ".anydesk"
         ".config/blender" # Blender preferences and Blender Lab MCP extension
         ".config/BraveSoftware" # browser profile (logins, cookies, history)
+        ".config/lact" # UI settings for the GPU control app
+        ".config/openrazer" # remembered Razer device settings
+        ".config/openvr" # SteamVR runtime paths
         ".local/share/umu"
         ".local/share/atuin"
         ".local/share/zoxide"
+        ".local/share/rtk" # token savings history and command logs
+        ".local/share/vicinae" # clipboard history database and copied item data
+        ".local/share/nautilus/tags" # file tags and metadata database
+        {
+          directory = ".config/PowerMonitor"; # WireView settings, LAN secret, and logs
+          mode = "0700";
+        }
+        {
+          directory = ".local/share/PowerMonitor"; # WireView device profiles
+          mode = "0700";
+        }
         ".local/state/ghostty"
+        ".local/state/wireplumber" # selected audio devices, routes, and stream settings
         ".slim" # services/slim.nix ReadWritePaths
         ".npm-global"
         ".bun"
@@ -157,7 +189,8 @@ in
         ".local/share/Steam" # gaming module enabled; large (games, library, login)
         ".steam" # Steam locator symlinks + registry.vdf/token; small, complements Steam above
         ".config/Signal"
-        ".config/xbvr" # database, metadata, indexes, previews, and downloads
+        ".config/photocraft" # PhotoCraft settings
+        ".config/filmcraft" # FilmCraft settings
         ".config/Code"
         ".config/opencode" # config, plugins, and global agent instructions
         ".local/share/opencode" # credentials, session database, logs, and snapshots
@@ -176,6 +209,7 @@ in
         ".cache/cliphist" # clipboard history db
         ".local/share/com.pais.handy"
         ".sklauncher"
+        ".config/sklauncher" # SKlauncher 4 Electron settings and sign-in
 
         ".pki" # NSS cert db (client certs)
         "best-minecraft-ever"

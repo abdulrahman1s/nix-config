@@ -111,6 +111,7 @@ let
     , extraBinNames ? [ ]
     , resourceLimits ? null
     , displayName ? null
+    , icon ? null # Optional launcher icon file; the desktop entry uses its absolute store path.
     , homeBinds ? { rw = [ ]; ro = [ ]; }
       # Host-home bind list: `{ rw, ro }` of `{ suffix; perms?; }`
       # entries. Suffix is `$HOME`-relative (e.g. `/Downloads`).
@@ -271,7 +272,9 @@ let
               NIXOS_OZONE_WL = "0";
             };
 
-            bubblewrap.bind.ro = [
+            # Device binds are applied after the private /tmp mount, keeping
+            # the X11 socket visible inside the sandbox.
+            bubblewrap.bind.dev = [
               "/tmp/.X11-unix"
             ];
           };
@@ -635,6 +638,10 @@ let
           if [ -d "${package}/share/icons" ]; then
             ln -s ${package}/share/icons $out/share/icons
           fi
+          ${pkgs.lib.optionalString (icon != null) ''
+            mkdir -p "$out/share/pixmaps"
+            install -m644 ${icon} "$out/share/pixmaps/${name}.svg"
+          ''}
           if [ -d "${package}/share/applications" ]; then
             mkdir -p $out/share/applications
             sanitize_dir="$(mktemp -d)"
@@ -667,6 +674,9 @@ let
                 --set-key=StartupNotify --set-value=true \
                 "$sanitized"
               mv "$out/share/applications/$(basename "$f")" "$target"
+              ${pkgs.lib.optionalString (icon != null) ''
+                desktop-file-edit --set-key=Icon --set-value="$out/share/pixmaps/${name}.svg" "$target"
+              ''}
             done
           fi
         fi

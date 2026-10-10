@@ -257,7 +257,8 @@ tab_previous = ["shift+iso_left_tab"]
 [bar.main]
 enabled = true
 position = "top"
-auto_hide = false
+auto_hide = true
+auto_hide_delay_ms = 300000
 show_on_workspace_switch = true
 reserve_space = true
 layer = "top"
@@ -278,7 +279,7 @@ capsule_border = ""
 hover_highlight = true
 start = ["launcher", "workspaces", "clock", "media", "bongocat"]
 center = ["active_window"]
-end = ["tray", "keyboard_layout", "clipboard", "battery", "airpods", "privacy", "screenshot", "volume", "control-center", "session"]
+end = ["tray", "keyboard_layout", "clipboard", "battery", "airpods", "wireview", "privacy", "screenshot", "volume", "control-center", "session"]
 
 [dock]
 enabled = true
@@ -330,8 +331,26 @@ type = "notification"
 type = "power_profile"
 
 [plugins]
-enabled = ["noctalia/screen_recorder", "noctalia/bongocat", "harveywuk/airpods"]
+enabled = ["noctalia/screen_recorder", "noctalia/bongocat", "harveywuk/airpods", "systemconf/wireview", "tordex/nvtop"]
 auto_update = "none"
+
+[[plugins.source]]
+name = "official"
+kind = "git"
+location = "https://github.com/noctalia-dev/official-plugins"
+enabled = true
+
+[[plugins.source]]
+name = "community"
+kind = "git"
+location = "https://github.com/noctalia-dev/community-plugins"
+enabled = true
+
+[[plugins.source]]
+name = "systemconf"
+kind = "path"
+location = "~/system-conf/config/noctalia-plugins"
+enabled = true
 
 [widget.launcher]
 glyph = "rocket"
@@ -366,6 +385,33 @@ audio_spectrum = true
 tappy_mode = true
 rave_mode = false
 use_mpris_filter = false
+
+[widget.wireview]
+type = "systemconf/wireview:power"
+bar_metric = "power"
+refresh_ms = 2000
+bar_glyph = "bolt"
+bar_color = "default"
+bar_decimals = -1
+highlight_faults = true
+highlight_warnings = true
+warning_color = "amber"
+show_alert_icon = true
+show_status_row = true
+show_power_meter = true
+show_pins = true
+pin_voltage = true
+pin_current = true
+pin_power = true
+show_temperatures = true
+show_other = true
+show_faults = true
+pin1 = true
+pin2 = true
+pin3 = true
+pin4 = true
+pin5 = true
+pin6 = true
 
 [widget.active_window]
 max_length = 40

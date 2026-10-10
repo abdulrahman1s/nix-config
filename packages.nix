@@ -1,5 +1,9 @@
 { inputs, pkgs, username, ... }:
 
+let
+  browserUse = pkgs.callPackage ./local-packages/browser-use.nix { };
+in
+
 {
 
 
@@ -12,7 +16,6 @@
 
   programs.steam-cleaner.enable = true;
 
-
   # ── Virtualisation ────────────────────────────────────────
   virtualisation.libvirtd.enable = true;
   programs.virt-manager.enable = true;
@@ -23,15 +26,16 @@
   users.users.${username} = {
     extraGroups = [ "plugdev" ];
     packages = (with pkgs; [
-      # chatgpt
+      # Codex needs user-selected project directories and host development tools.
+      # A fixed NixPak file bind would block that core workflow.
+      inputs.self.packages.${pkgs.system}.chatgpt
       blender
       inputs.self.packages.${pkgs.system}.codex
       inputs.self.packages.${pkgs.system}.claude-code
+      browserUse
       wtype
       opencode
-      handy
       hcxtools
-      kiwix
       # mosquitto
 
       # Reverse engineering & security
@@ -55,10 +59,7 @@
       just
       nh
       rtk
-
-
       waycorner # hot-corner daemon for Wayland
-      signal-desktop
     ]);
   };
 

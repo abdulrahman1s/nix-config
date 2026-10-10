@@ -1,0 +1,112 @@
+--- a/src/config/config_types.h
++++ b/src/config/config_types.h
+@@ -132,6 +132,7 @@
+   std::string position = "top";
+   bool enabled = true;
+   bool autoHide = false;             // slide out when the pointer leaves; reveal on edge approach
++  std::int32_t autoHideDelayMs = 0;   // delay each hide after the pointer leaves; 0 keeps immediate behavior
+   bool smartAutoHide = false;        // hide while the active workspace has windows; show when it is empty
+   bool showOnWorkspaceSwitch = true; // with auto_hide: briefly reveal when the active workspace changes
+ 
+--- a/src/config/schema/config_schema.cpp
++++ b/src/config/schema/config_schema.cpp
+@@ -2263,6 +2263,7 @@
+     static const Schema<BarConfig> s = {
+         field(&BarConfig::enabled, "enabled"),
+         field(&BarConfig::autoHide, "auto_hide"),
++        field(&BarConfig::autoHideDelayMs, "auto_hide_delay_ms"),
+         field(&BarConfig::smartAutoHide, "smart_auto_hide"),
+         field(&BarConfig::showOnWorkspaceSwitch, "show_on_workspace_switch"),
+         field(&BarConfig::reserveSpace, "reserve_space"),
+--- a/src/shell/bar/bar_instance.h
++++ b/src/shell/bar/bar_instance.h
+@@ -1,6 +1,7 @@
+ #pragma once
+ 
+ #include "config/config_service.h"
++#include "core/timer_manager.h"
+ #include "render/animation/animation_manager.h"
+ #include "render/scene/input_area.h"
+ #include "render/scene/input_dispatcher.h"
+@@ -69,6 +70,7 @@
+   bool ipcLayoutReleased = false;
+   // bar-auto-hide-set off keeps autoHide true until the reveal completes; block hover helpers from replacing it.
+   bool autoHideDisablePending = false;
++  Timer autoHideDelayTimer;
+   // smart_auto_hide: active workspace empty (or overview open) — keep the bar visible.
+   bool smartAutoHidePinnedVisible = false;
+   bool pointerInside = false;
+--- a/src/shell/bar/bar.h
++++ b/src/shell/bar/bar.h
+@@ -152,7 +152,7 @@
+   [[nodiscard]] bool isWorkspacePeekActive() const noexcept;
+   void applyPendingWorkspaceReveal();
+   void reevaluateSmartAutoHide();
+-  void startHideFadeOut(BarInstance& instance);
++  void startHideFadeOut(BarInstance& instance, bool immediate = false);
+   static void applyBackgroundPalette(BarInstance& instance);
+   [[nodiscard]] std::string showBarIpc(std::string_view args);
+   [[nodiscard]] std::string hideBarIpc(std::string_view args);
+--- a/src/shell/bar/bar.cpp
++++ b/src/shell/bar/bar.cpp
+@@ -1905,7 +1905,7 @@
+     if (visible) {
+       revealAutoHideBar(instance);
+     } else {
+-      startHideFadeOut(instance);
++      startHideFadeOut(instance, true);
+     }
+     return;
+   }
+@@ -3114,6 +3114,7 @@
+     return;
+   }
+ 
++  instance.autoHideDelayTimer.stop();
+   instance.ipcLayoutReleased = false;
+   instance.animations.cancelForOwner(instance.slideRoot);
+   const float current = instance.hideOpacity;
+@@ -3199,10 +3200,28 @@
+   instance.surface->setBlurRegion(blurStrips);
+ }
+ 
+-void Bar::startHideFadeOut(BarInstance& instance) {
++void Bar::startHideFadeOut(BarInstance& instance, bool immediate) {
+   if (instance.autoHideDisablePending || instance.smartAutoHidePinnedVisible) {
+     return;
+   }
++  if (!immediate && instance.barConfig.autoHide && instance.barConfig.autoHideDelayMs > 0) {
++    if (!instance.autoHideDelayTimer.active()) {
++      instance.autoHideDelayTimer.start(
++          std::chrono::milliseconds(instance.barConfig.autoHideDelayMs), [this, inst = &instance]() {
++            if (inst->pointerInside || inst->attachedPopupCount > 0 || !barPointerHideAllowed(*inst)) {
++              return;
++            }
++            const bool suppressed =
++                (m_autoHideSuppressionCallback != nullptr) ? m_autoHideSuppressionCallback(*inst) : false;
++            if (!suppressed) {
++              startHideFadeOut(*inst, true);
++            }
++          }
++      );
++    }
++    return;
++  }
++  instance.autoHideDelayTimer.stop();
+   const float current = instance.hideOpacity;
+   instance.animations.animate(
+       current, 0.0F, Style::animNormal, Easing::EaseInQuad,
+@@ -3348,8 +3367,12 @@
+     if (barConfigUsesSlideSurface(instance.barConfig)) {
+       instance.slideRoot->setOpacity(1.0F);
+       const bool startHidden =
+-          instance.barConfig.smartAutoHide ? !instance.smartAutoHidePinnedVisible : instance.barConfig.autoHide;
++          instance.barConfig.smartAutoHide ? !instance.smartAutoHidePinnedVisible
++                                           : instance.barConfig.autoHide && instance.barConfig.autoHideDelayMs == 0;
+       instance.hideOpacity = startHidden ? 0.0F : 1.0F;
++      if (instance.barConfig.autoHide && instance.barConfig.autoHideDelayMs > 0) {
++        startHideFadeOut(instance);
++      }
+     } else {
+       instance.slideRoot->setOpacity(1.0F);
+       instance.hideOpacity = 1.0F;

@@ -1,4 +1,4 @@
-{ config, pkgs, username, fullName, lib, ... }:
+{ pkgs, username, fullName, lib, ... }:
 
 {
   imports =
@@ -9,8 +9,8 @@
 
       # Feature modules
       ./modules/gaming.nix
+      ./modules/desktop.nix
       ./modules/development.nix
-      ./modules/ai
       ./modules/ios.nix
       ./modules/remote-control.nix
       ./modules/niri-dynamic-float.nix
@@ -91,16 +91,17 @@
     ];
   };
 
-  personal-ai = {
-    enable = true;
-    cloud = {
-      fastModel = "openrouter/auto";
-      strongModel = "openrouter/auto";
-      environmentFile = config.age.secrets.personal-ai-cloud-env.path;
-    };
-  };
+  # Exact hostnames Brave should send through WARP's local proxy.
+  services.cloudflare-warp-proxy.braveHosts = [
+    "search.nixos.org"
+    "www.protondb.com"
+    "www.roblox.com"
+    "proton.me"
+    "protonvpn.com"
+    "htmx.org"
+  ];
 
-    services.tailscale.enable = true;
+  services.tailscale.enable = true;
 
 
   # Fixes Gnome Display Manager fails to login until Wi-Fi connection is established.

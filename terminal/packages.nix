@@ -51,7 +51,6 @@
     btop # Beautiful CLI system resource monitor
     fd # Faster, user-friendly alternative to 'find'
     file # Determines file types from their content
-    htop # Interactive process viewer (better 'top')
     lm_sensors # Reads CPU and hardware temperatures
     lsof # Lists open files and the processes using them
     psmisc # Process management tools (killall, pstree)

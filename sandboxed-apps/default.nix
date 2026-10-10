@@ -1,10 +1,10 @@
-{ pkgs, inputs, username, ... }:
+{ pkgs, inputs, username, config, ... }:
 
 let
   nixpak = inputs.nixpak;
   utils = import ./nixpak { inherit pkgs nixpak username; };
   sandboxedXdgUtils = pkgs.callPackage ./nixpak/xdg-utils.nix { };
-  call = file: import file { inherit pkgs utils sandboxedXdgUtils inputs username; };
+  call = file: import file { inherit pkgs utils sandboxedXdgUtils inputs username config; };
 
   mpv = call ./mpv.nix;
   minecraft = call ./minecraft.nix;
@@ -13,7 +13,9 @@ let
   browser = call ./browser.nix;
   orca-slicer = call ./orca-slicer.nix;
   stremio = call ./stremio.nix;
-  xbvr = call ./xbvr.nix;
+  wireview = call ./wireview-linux.nix;
+  photocraft = call ./photocraft.nix;
+  filmcraft = call ./filmcraft.nix;
 in
 {
   imports = [ browser.module ];
@@ -34,27 +36,19 @@ in
     fi
   '';
 
-  system.userActivationScripts.xbvr-data.text = ''
-    ${pkgs.coreutils}/bin/install -d -m 0700 "$HOME/.config/xbvr"
 
-    # Older XBVR launches downloaded private codec copies here. The source
-    # build now uses Nix's ffmpeg directly, so discard that stale mutable state.
-    ${pkgs.coreutils}/bin/rm -f \
-      "$HOME/.config/xbvr/bin/ffmpeg" \
-      "$HOME/.config/xbvr/bin/ffprobe"
+  system.userActivationScripts.photocraft-data.text = ''
+    ${pkgs.coreutils}/bin/install -d -m 0700 "$HOME/.config/photocraft"
   '';
 
-  systemd.user.services.xbvr = {
-    description = "Sandboxed XBVR media server";
-    wantedBy = [ "graphical-session.target" ];
-    after = [ "graphical-session.target" ];
-    partOf = [ "graphical-session.target" ];
-    serviceConfig = {
-      ExecStart = "${xbvr}/bin/xbvr";
-      Restart = "on-failure";
-      RestartSec = 5;
-    };
-  };
+  system.userActivationScripts.filmcraft-data.text = ''
+    ${pkgs.coreutils}/bin/install -d -m 0700 "$HOME/.config/filmcraft"
+  '';
+
+  system.userActivationScripts.sklauncher-data.text = ''
+    ${pkgs.coreutils}/bin/install -d -m 0700 "$HOME/.config/sklauncher"
+  '';
+
 
   users.users.${username}.packages = [
     mpv
@@ -63,6 +57,10 @@ in
     minecraft
     orca-slicer
     stremio
-    xbvr
+    wireview.sandbox
+    photocraft
+    filmcraft
   ] ++ browser.packages;
+
+  services.udev.packages = [ wireview.package ];
 }

@@ -16,7 +16,6 @@ binds {
     Mod+P hotkey-overlay-title="Open Mission Center " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus missioncenter --id io.missioncenter.MissionCenter --toggle-previous --focus-existing"; }
     Mod+V hotkey-overlay-title="Open Clipboard " repeat=false  { spawn "vicinae" "vicinae://launch/clipboard/history"; }
     Mod+E hotkey-overlay-title="Open Emoji Picker " repeat=false  { spawn "vicinae" "vicinae://launch/core/search-emojis"; }
-    Mod+A hotkey-overlay-title="AI Workflows" repeat=false { spawn "vicinae" "cmd" "launch" "@abdulrahman/personal-ai:workflows"; }
 
 
     Mod+M repeat=false hotkey-overlay-title="Open YT Music (Webapp)" { spawn-sh "~/.config/niri/niri-launch-or-focus-webapp music.youtube.com"; }

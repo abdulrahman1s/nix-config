@@ -6,5 +6,6 @@
     ./avahi.nix
     ./minepanel.nix
     ./slim.nix
+    ./wireview-hwmon.nix
   ];
 }

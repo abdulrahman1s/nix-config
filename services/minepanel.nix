@@ -14,11 +14,15 @@ let
     "/var/lib/docker/volumes/games-minepanel-rnwhi4_minepanel-servers";
 in
 {
+  # Swarm state is persisted in /var/lib/docker; Docker rejects live restore
+  # when joining that swarm, so the old-stateVersion default prevents startup.
+  virtualisation.docker.daemon.settings."live-restore" = false;
+
   virtualisation.oci-containers.backend = "docker";
   virtualisation.oci-containers.containers = {
     minepanel-backend = {
       image =
-        "ketbom/minepanel-backend@sha256:7d47bc26f234d4dbdcad5b94506a17bac81f9b89aa599d2cfa8ad9962ace5889";
+        "ketbom/minepanel-backend@sha256:0e603c997ece0b48bed6f93c559fc640cf75fabccdcaefd918ce53188f754c5b";
       environment = {
         NODE_ENV = "production";
         FRONTEND_URL = "https://minecraft.test";
@@ -34,7 +38,7 @@ in
 
     minepanel-frontend = {
       image =
-        "ketbom/minepanel-frontend@sha256:876507fce1682ad149bb03bcaad0453c1df666dee64825ddec06903f17c86bb8";
+        "ketbom/minepanel-frontend@sha256:3f21ecbb2f334934d5bd102ee3944ba9e7a968efb398ff8bbaad57503a4fb78e";
       environment = {
         NEXT_PUBLIC_BACKEND_URL = "https://minecraft.test/backend";
         NEXT_PUBLIC_DEFAULT_LANGUAGE = "en";

@@ -1,0 +1,364 @@
+id = "systemconf/wireview"
+name = "WireView"
+version = "1.3.0"
+plugin_api = 23
+author = "systemconf"
+description = "Live WireView Pro II power and sensor readings from Linux hwmon."
+icon = "bolt"
+
+[[widget]]
+id = "power"
+entry = "widget.luau"
+
+[[widget.setting]]
+key = "bar_metric"
+type = "select"
+label_key = "settings.bar_metric.label"
+default = "power"
+options = [
+  { value = "power", label_key = "settings.metric.power" },
+  { value = "current", label_key = "settings.metric.current" },
+  { value = "voltage", label_key = "settings.metric.voltage" },
+  { value = "imbalance", label_key = "settings.metric.imbalance" },
+  { value = "voltage_spread", label_key = "settings.metric.voltage_spread" },
+  { value = "temperature", label_key = "settings.metric.temperature" },
+  { value = "psu_load", label_key = "settings.metric.psu_load" },
+  { value = "fan", label_key = "settings.metric.fan" },
+  { value = "pin1_current", label_key = "settings.metric.pin1_current" },
+  { value = "pin2_current", label_key = "settings.metric.pin2_current" },
+  { value = "pin3_current", label_key = "settings.metric.pin3_current" },
+  { value = "pin4_current", label_key = "settings.metric.pin4_current" },
+  { value = "pin5_current", label_key = "settings.metric.pin5_current" },
+  { value = "pin6_current", label_key = "settings.metric.pin6_current" },
+  { value = "pin1_power", label_key = "settings.metric.pin1_power" },
+  { value = "pin2_power", label_key = "settings.metric.pin2_power" },
+  { value = "pin3_power", label_key = "settings.metric.pin3_power" },
+  { value = "pin4_power", label_key = "settings.metric.pin4_power" },
+  { value = "pin5_power", label_key = "settings.metric.pin5_power" },
+  { value = "pin6_power", label_key = "settings.metric.pin6_power" },
+  { value = "pin1_voltage", label_key = "settings.metric.pin1_voltage" },
+  { value = "pin2_voltage", label_key = "settings.metric.pin2_voltage" },
+  { value = "pin3_voltage", label_key = "settings.metric.pin3_voltage" },
+  { value = "pin4_voltage", label_key = "settings.metric.pin4_voltage" },
+  { value = "pin5_voltage", label_key = "settings.metric.pin5_voltage" },
+  { value = "pin6_voltage", label_key = "settings.metric.pin6_voltage" },
+]
+
+[[widget.setting]]
+key = "refresh_ms"
+type = "int"
+label_key = "settings.refresh_ms.label"
+default = 2000
+min = 500
+max = 10000
+
+[[widget.setting]]
+key = "bar_glyph"
+type = "glyph"
+label_key = "settings.bar_glyph.label"
+default = "bolt"
+
+[[widget.setting]]
+key = "bar_color"
+type = "select"
+label_key = "settings.bar_color.label"
+default = "default"
+options = [
+  { value = "default", label_key = "settings.color.default" },
+  { value = "primary", label_key = "settings.color.primary" },
+  { value = "secondary", label_key = "settings.color.secondary" },
+]
+
+[[widget.setting]]
+key = "bar_decimals"
+type = "int"
+label_key = "settings.bar_decimals.label"
+description_key = "settings.bar_decimals.description"
+default = -1
+min = -1
+max = 3
+
+[[widget.setting]]
+key = "bar_prefix"
+type = "string"
+label_key = "settings.bar_prefix.label"
+default = ""
+
+[[widget.setting]]
+key = "bar_suffix"
+type = "string"
+label_key = "settings.bar_suffix.label"
+default = ""
+
+[[widget.setting]]
+key = "show_tooltip"
+type = "bool"
+label_key = "settings.show_tooltip.label"
+default = true
+
+[[widget.setting]]
+key = "show_total_power"
+type = "bool"
+label_key = "settings.show_total_power.label"
+default = true
+visible_when = { key = "show_tooltip", values = ["true"] }
+
+[[widget.setting]]
+key = "show_total_current"
+type = "bool"
+label_key = "settings.show_total_current.label"
+default = true
+visible_when = { key = "show_tooltip", values = ["true"] }
+
+[[widget.setting]]
+key = "show_avg_voltage"
+type = "bool"
+label_key = "settings.show_avg_voltage.label"
+default = true
+visible_when = { key = "show_tooltip", values = ["true"] }
+
+[[widget.setting]]
+key = "show_imbalance"
+type = "bool"
+label_key = "settings.show_imbalance.label"
+default = true
+visible_when = { key = "show_tooltip", values = ["true"] }
+
+[[widget.setting]]
+key = "show_voltage_spread"
+type = "bool"
+label_key = "settings.show_voltage_spread.label"
+default = true
+visible_when = { key = "show_tooltip", values = ["true"] }
+
+[[widget.setting]]
+key = "show_pins"
+type = "bool"
+label_key = "settings.show_pins.label"
+default = true
+
+[[widget.setting]]
+key = "pin_voltage"
+type = "bool"
+label_key = "settings.pin_voltage.label"
+default = true
+visible_when = { key = "show_pins", values = ["true"] }
+
+[[widget.setting]]
+key = "pin_current"
+type = "bool"
+label_key = "settings.pin_current.label"
+default = true
+visible_when = { key = "show_pins", values = ["true"] }
+
+[[widget.setting]]
+key = "pin_power"
+type = "bool"
+label_key = "settings.pin_power.label"
+default = true
+visible_when = { key = "show_pins", values = ["true"] }
+
+[[widget.setting]]
+key = "show_temperatures"
+type = "bool"
+label_key = "settings.show_temperatures.label"
+default = true
+
+[[widget.setting]]
+key = "temp_in"
+type = "bool"
+label_key = "settings.temp_in.label"
+default = true
+visible_when = { key = "show_temperatures", values = ["true"] }
+
+[[widget.setting]]
+key = "temp_out"
+type = "bool"
+label_key = "settings.temp_out.label"
+default = true
+visible_when = { key = "show_temperatures", values = ["true"] }
+
+[[widget.setting]]
+key = "temp_ext1"
+type = "bool"
+label_key = "settings.temp_ext1.label"
+default = true
+visible_when = { key = "show_temperatures", values = ["true"] }
+
+[[widget.setting]]
+key = "temp_ext2"
+type = "bool"
+label_key = "settings.temp_ext2.label"
+default = true
+visible_when = { key = "show_temperatures", values = ["true"] }
+
+[[widget.setting]]
+key = "show_other"
+type = "bool"
+label_key = "settings.show_other.label"
+default = true
+
+[[widget.setting]]
+key = "show_vdd"
+type = "bool"
+label_key = "settings.show_vdd.label"
+default = true
+visible_when = { key = "show_other", values = ["true"] }
+
+[[widget.setting]]
+key = "show_energy"
+type = "bool"
+label_key = "settings.show_energy.label"
+default = true
+visible_when = { key = "show_other", values = ["true"] }
+
+[[widget.setting]]
+key = "show_psu_cap"
+type = "bool"
+label_key = "settings.show_psu_cap.label"
+default = true
+visible_when = { key = "show_other", values = ["true"] }
+
+[[widget.setting]]
+key = "show_fan"
+type = "bool"
+label_key = "settings.show_fan.label"
+default = true
+visible_when = { key = "show_other", values = ["true"] }
+
+[[widget.setting]]
+key = "show_psu_load"
+type = "bool"
+label_key = "settings.show_psu_load.label"
+default = true
+visible_when = { key = "show_other", values = ["true"] }
+
+[[widget.setting]]
+key = "show_faults"
+type = "bool"
+label_key = "settings.show_faults.label"
+default = true
+
+[[widget.setting]]
+key = "show_alarm_details"
+type = "bool"
+label_key = "settings.show_alarm_details.label"
+default = true
+visible_when = { key = "show_faults", values = ["true"] }
+
+[[widget.setting]]
+key = "show_raw_faults"
+type = "bool"
+label_key = "settings.show_raw_faults.label"
+default = true
+visible_when = { key = "show_faults", values = ["true"] }
+
+[[widget.setting]]
+key = "highlight_faults"
+type = "bool"
+label_key = "settings.highlight_faults.label"
+default = true
+
+[[widget.setting]]
+key = "highlight_warnings"
+type = "bool"
+label_key = "settings.highlight_warnings.label"
+default = true
+
+[[widget.setting]]
+key = "warning_color"
+type = "select"
+label_key = "settings.warning_color.label"
+default = "amber"
+options = [
+  { value = "amber", label_key = "settings.color.amber" },
+  { value = "error", label_key = "settings.color.error" },
+  { value = "tertiary", label_key = "settings.color.tertiary" },
+]
+visible_when = { key = "highlight_warnings", values = ["true"] }
+
+[[widget.setting]]
+key = "show_alert_icon"
+type = "bool"
+label_key = "settings.show_alert_icon.label"
+default = true
+
+[[widget.setting]]
+key = "show_status_row"
+type = "bool"
+label_key = "settings.show_status_row.label"
+default = true
+visible_when = { key = "show_tooltip", values = ["true"] }
+
+[[widget.setting]]
+key = "show_power_meter"
+type = "bool"
+label_key = "settings.show_power_meter.label"
+default = true
+visible_when = { key = "show_other", values = ["true"] }
+
+[[widget.setting]]
+key = "power_warning_watts"
+type = "int"
+label_key = "settings.power_warning_watts.label"
+description_key = "settings.warning_zero.description"
+default = 0
+min = 0
+max = 2000
+advanced = true
+
+[[widget.setting]]
+key = "imbalance_warning_percent"
+type = "int"
+label_key = "settings.imbalance_warning_percent.label"
+description_key = "settings.warning_zero.description"
+default = 0
+min = 0
+max = 200
+advanced = true
+
+[[widget.setting]]
+key = "temperature_warning_c"
+type = "int"
+label_key = "settings.temperature_warning_c.label"
+description_key = "settings.warning_zero.description"
+default = 0
+min = 0
+max = 150
+advanced = true
+
+[[widget.setting]]
+key = "pin1"
+type = "bool"
+label_key = "settings.pin1.label"
+default = true
+
+[[widget.setting]]
+key = "pin2"
+type = "bool"
+label_key = "settings.pin2.label"
+default = true
+
+[[widget.setting]]
+key = "pin3"
+type = "bool"
+label_key = "settings.pin3.label"
+default = true
+
+[[widget.setting]]
+key = "pin4"
+type = "bool"
+label_key = "settings.pin4.label"
+default = true
+
+[[widget.setting]]
+key = "pin5"
+type = "bool"
+label_key = "settings.pin5.label"
+default = true
+
+[[widget.setting]]
+key = "pin6"
+type = "bool"
+label_key = "settings.pin6.label"
+default = true

@@ -119,7 +119,7 @@
       "files": {
          "enabled": false,
          "preferences": {
-            "autoIndexing": true,
+            "autoIndexing": false,
             "excludedPaths": "",
             "paths": "/home/abdulrahman",
             "watcherPaths": ""

@@ -1,7 +1,4 @@
-# RTX 5090 desktop and LACT configuration.
-# Replace the supplied module with this file; keep the same specialArgs
-# (inputs and username). This is a complete replacement, not an extra import.
-#
+# RTX 5090 graphics and LACT configuration.
 # TUNING
 #   activeProfile is the single persistent profile selector below.
 #   balanced starts at 490 W, a 2700 MHz ceiling, and +100 MHz P0 offset.
@@ -18,29 +15,6 @@
 #   No direct VF edits, memory OC, voltage boost, or locked-high idle clock.
 #   P0 is targeted for gaming; a P2 compute workload needs separate validation.
 #
-# BEFORE APPLYING
-#   lact cli list-gpus
-#   nvidia-smi -i 0000:0a:00.0 -q -d POWER,SUPPORTED_CLOCKS
-#   Confirm the exact LACT GPU ID, board power limits and supported clocks.
-#   Change rtx5090Id if PCI enumeration changes. Do not use the ID on another GPU.
-#   Keep nixpkgs/LACT/NVIDIA pinned in your existing flake.lock during testing.
-#
-# APPLY / VERIFY (run from your existing NixOS flake, replace HOST)
-#   sudo nixos-rebuild build --flake .#HOST
-#   sudo nixos-rebuild test --flake .#HOST
-#   journalctl -u lactd -b --no-pager
-#   nvidia-smi -i 0000:0a:00.0 -q -d POWER,CLOCK,TEMPERATURE,VOLTAGE
-#   Check that LACT reports the intended limits and no apply errors. A running
-#   daemon alone does not prove that every setting was accepted by the driver.
-#   Compare stock, power-limit-only, then balanced in the SAME workload/settings.
-#   Test several games, ray tracing, load transitions, cold boot and suspend/resume;
-#   check frame times, temperatures, artifacts and kernel NVRM/Xid messages.
-#   For CUDA/AI, also verify numerical output against a stock run.
-#   If unstable, reduce coreOffsetMHz by 25-50, or use power-limit-only/stock.
-#   Reducing the ceiling can help high-load failures, but does not fix an
-#   unstable offset at every lower-frequency operating point.
-#   After validation: sudo nixos-rebuild switch --flake .#HOST
-#
 # RECOVERY / PERSISTENCE
 #   Set activeProfile = "stock" and rebuild to restore firmware-controlled
 #   clocks, board-default power and automatic fans through LACT.
@@ -50,16 +24,16 @@
 #   changes. GUI edits/profile selections may fail to save. The 15-second apply
 #   timer covers interactive changes; it does not roll back boot-time tuning.
 #
-# References checked for this rewrite:
+# References:
 #   https://github.com/ilya-zlobintsev/LACT/blob/master/docs/CONFIG.md
 #   https://github.com/ilya-zlobintsev/LACT/releases/tag/v0.10.1
 #   https://github.com/ilya-zlobintsev/LACT/issues/486
 #   https://docs.nvidia.com/deploy/nvidia-smi/index.html
 #
-{ lib, pkgs, config, inputs, username, ... }:
+{ lib, pkgs, config, ... }:
 let
   rtx5090Id = "10DE:2B85-196E:1431-0000:0a:00.0";
-  activeProfile = "balanced";
+  activeProfile = "performance-undervolt";
 
   # Firmware fan control is the default. Opt in only after checking GPU and
   # memory temperatures under sustained load; an edge-only curve cannot respond
@@ -67,7 +41,6 @@ let
   useCustomFanCurves = false;
   minCoreClockMHz = 300;
 
-  noctaliaPackage = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.noctalia;
   lactVersion = lib.getVersion config.services.lact.package;
 
   fanCurves = {
@@ -211,30 +184,6 @@ in
     message = "Invalid RTX 5090 tuning values in profile ${name}.";
   }) tuningProfiles;
 
-  services.xserver.xkb = {
-    layout = "us";
-    variant = "";
-  };
-
-  services.keyd = {
-    enable = true;
-    keyboards.default.settings.main = {
-      end = "noop";
-      leftcontrol = "leftcontrol";
-      leftshift = "leftshift";
-      pagedown = "noop";
-      pageup = "noop";
-      rightcontrol = "rightcontrol";
-      rightshift = "rightshift";
-    };
-  };
-
-  services.udev.extraRules = ''
-    KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="keyd virtual keyboard", GROUP="users", MODE="0660", SYMLINK+="input/by-id/keyd-virtual-keyboard-%k"
-  '';
-
-  services.xserver.enable = true;
-  services.displayManager.ly.enable = true;
   services.xserver.videoDrivers = [ "nvidia" ];
 
   # fbcon uses the smallest connected mode for its visible surface. Give both
@@ -327,94 +276,6 @@ in
     fi
   '';
 
-  console = {
-    font = "ter-v32n";
-    packages = [ pkgs.terminus_font ];
-  };
-
-  # ── Niri (scrollable tiling Wayland compositor) ──────────
-  programs.niri = {
-    enable = true;
-    package = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.niri;
-  };
-
-  # niri reads ~/.config/niri/config.kdl at startup — a symlink into this repo
-  # created by nixos-activation.service (system.userActivationScripts.dotfiles).
-  # impermanence wipes ~/.config every boot, so those symlinks are recreated on
-  # each login. Without ordering, niri.service races the (slow) activation script
-  # and on a lost race finds no config, writes a default, and loads built-in
-  # defaults until the next login. Order niri after activation so the symlinks
-  # always exist first.
-  systemd.user.services.niri = {
-    after = [ "nixos-activation.service" ];
-    wants = [ "nixos-activation.service" ];
-  };
-
-  systemd.user.services.noctalia = {
-    description = "Noctalia desktop shell";
-    wantedBy = [ "niri.service" ];
-    after = [ "niri.service" ];
-    partOf = [ "niri.service" ];
-    unitConfig.StartLimitIntervalSec = 0;
-
-    serviceConfig = {
-      Type = "simple";
-      ExecStart = "${noctaliaPackage}/bin/noctalia";
-      Restart = "on-failure";
-      RestartSec = 2;
-    };
-  };
-
-  # Desktop apps
-  users.users.${username}.packages = with pkgs; [
-    gnome-calculator
-    gnome-disk-utility
-    gnome-logs
-    baobab
-    gparted
-    mission-center
-    gnome-pomodoro
-    gnome-text-editor
-    nautilus
-
-    linux-wallpaperengine
-    nwg-look # GTK settings
-
-    imagemagick
-    (tesseract.override {
-      enableLanguages = [ "eng" "ara" ];
-    })
-    gifski
-    cliphist
-    zbar # Barcode scanner
-    grim
-    jq
-    slurp
-    wl-screenrec
-
-    xdg-desktop-portal
-    vicinae # Launcher
-  ];
-
-  # SteamVR creates visible URI-handler entries without an Icon field. Repair
-  # them after installation and whenever Steam recreates them.
-  system.userActivationScripts.steamvr-desktop-icons.text = ''
-    for desktopEntry in \
-      "$HOME/.local/share/applications/valve-vrmonitor.desktop" \
-      "$HOME/.local/share/applications/valve-URI-vrmonitor.desktop"; do
-      [ -f "$desktopEntry" ] || continue
-      if ! ${pkgs.gnugrep}/bin/grep -q '^Icon=' "$desktopEntry"; then
-        ${pkgs.gnused}/bin/sed -i '/^Type=Application$/a Icon=steam' "$desktopEntry"
-      fi
-    done
-  '';
-
-  # Needed for nautilus to mount partitions
-  services.udisks2.enable = true;
-  services.gvfs.enable = true;
-
-  programs.gpu-screen-recorder.enable = true;
-
   services.lact = {
     enable = true;
     package = pkgs.lact;
@@ -452,19 +313,6 @@ in
     };
   };
 
-  # ── Noctalia (panel/shell for niri) ──────────────────────
-  environment.systemPackages = [
-    noctaliaPackage
-    pkgs.evtest
-    pkgs.wl-clipboard
-    pkgs.xwayland-satellite
-    pkgs.adw-gtk3
-    pkgs.kdePackages.breeze-icons
-  ];
-
-  services.upower.enable = true;
-  services.power-profiles-daemon.enable = lib.mkDefault true;
-
   hardware.nvidia = {
     open = true;
     modesetting.enable = lib.mkDefault true;
@@ -472,6 +320,7 @@ in
     nvidiaPersistenced = true;
     package = config.boot.kernelPackages.nvidiaPackages.stable;
   };
+  hardware.nvidia-container-toolkit.enable = true;
 
   # Reduce niri VRAM usage by disabling NVIDIA's free buffer pool reuse
   # https://github.com/niri-wm/niri/wiki/Nvidia
@@ -503,10 +352,5 @@ in
     enable32Bit = true;
     extraPackages = with pkgs; [ mangohud nvidia-vaapi-driver ];
     extraPackages32 = with pkgs; [ pkgsi686Linux.mangohud ];
-  };
-
-  programs.nautilus-open-any-terminal = {
-    enable = true;
-    terminal = "ghostty";
   };
 }

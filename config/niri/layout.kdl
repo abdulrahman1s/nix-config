@@ -4,6 +4,12 @@ layout {
     center-focused-column "on-overflow"
     always-center-single-column
 
+    // Leave neighboring columns visible beside a maximized tiled column.
+    struts {
+        left 24
+        right 24
+    }
+
     // Widths cycled by Mod+R (switch-preset-column-width); heights by Mod+Shift+R.
     preset-column-widths {
         proportion 0.33333

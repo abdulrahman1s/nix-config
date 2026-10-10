@@ -1,10 +1,7 @@
-{ pkgs, utils, sandboxedXdgUtils, ... }:
+{ pkgs, inputs, utils, sandboxedXdgUtils, ... }:
 
 let
-  jarFile = pkgs.fetchurl {
-    url = "https://skmedix.pl/binaries/skl/3.2.18/SKlauncher-3.2.18.jar";
-    hash = "sha256-Jac+N3Ch2NFLzlPokg4uiTqsw8cV0Psi+HjvIJDQOGM=";
-  };
+  sklauncher = inputs.self.packages.${pkgs.system}.sklauncher;
 
   icon = pkgs.fetchurl {
     url = "https://minecraft.wiki/images/Bedrock_Edition_Google_Play_icon_1.png?daf7c?download"; # From https://minecraft.wiki/w/Logo
@@ -16,10 +13,7 @@ let
     paths = [
       (
         pkgs.writeShellScriptBin "minecraft" ''
-          exec ${pkgs.steam-run}/bin/steam-run ${pkgs.javaPackages.compiler.temurin-bin.jre-25}/bin/java \
-            --enable-native-access=ALL-UNNAMED \
-            -Dawt.useSystemAAFontSettings=on \
-            -jar "${jarFile}" "$@"
+          exec ${sklauncher}/bin/sklauncher "$@"
         ''
       )
       (pkgs.makeDesktopItem {
@@ -41,13 +35,14 @@ utils.mkSandboxed {
   package = minecraft-pkg;
   name = "minecraft";
   displayName = "Minecraft";
-  wmClass = "java"; # JavaFX always reports WM_CLASS as 'java'
+  wmClass = "pl.skmedix.sklauncher";
+  configDir = "sklauncher";
   extraPackages = [ sandboxedXdgUtils ];
   presets = [
     "wayland"
     "gpu" # Required for OpenGL/Hardware acceleration
     "audio" # Game sound
-    "network" # Login and downloading updates
+    "network" # Login and game downloads
     "portals" # "Open directory" in launcher → xdg-desktop-portal
   ];
 
