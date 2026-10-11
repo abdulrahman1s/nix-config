@@ -64,6 +64,8 @@
     narinfo-cache-negative-ttl = 0;
     # Build on GitHub Actions; fail locally if an output is absent from every cache.
     max-jobs = 0;
+    # NixOS uses preferLocalBuild for small generated files, but CI publishes them too.
+    always-allow-substitutes = true;
     http-connections = 50;
     warn-dirty = false;
     # During builds, collect only unreachable store paths before free space
