@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Select every output built by the runner for cache publication."""
+"""Select runner-built outputs, excluding downloaded fixed-output sources."""
 
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -12,10 +14,20 @@ records = [
     for line in record_file.read_text().splitlines()
     if "\t" in line
 ]
-# Fixed-output downloads can be runtime references of another cached output. If
-# they are absent from every upstream cache, omitting them makes a local rebuild
-# run their download derivations even though the main package is cached.
-paths = {path for _, path in records}
+drvs = sorted({drv for drv, _ in records})
+result = subprocess.run(
+    ["nix", "derivation", "show", *drvs],
+    check=True,
+    capture_output=True,
+    text=True,
+)
+derivations = json.loads(result.stdout)["derivations"]
+
+paths = set()
+for drv, path in records:
+    derivation = derivations[Path(drv).name]
+    if all("hash" not in output for output in derivation["outputs"].values()):
+        paths.add(path)
 
 if exclude_file is not None and exclude_file.exists():
     paths.difference_update(exclude_file.read_text().splitlines())
