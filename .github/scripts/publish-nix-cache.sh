@@ -22,7 +22,7 @@ if [ -s "$new_paths" ]; then
   chmod 0600 "$signing_key"
   printf '%s\n' "$NIX_CACHE_SIGNING_KEY" > "$signing_key"
 
-  nix copy --no-recursive --stdin --to "file://$cache?secret-key=$signing_key&compression=zstd" < "$new_paths"
+  python3 .github/scripts/export-nix-paths.py "$new_paths" "$cache" "$signing_key"
   python3 .github/scripts/upload-nix-cache.py "$cache"
   cat "$new_paths" >> "$uploaded_paths"
   sort -u -o "$uploaded_paths" "$uploaded_paths"

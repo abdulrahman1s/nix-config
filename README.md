@@ -141,8 +141,8 @@ kernel gets 120 minutes. Failed derivation hashes are recorded privately in R2
 so later runs can continue with the remaining packages without repeating known
 failures. A manually dispatched run can enable **Retry unchanged failures**;
 changed derivations retry automatically because their store hashes change.
-Completed outputs are uploaded in low-priority batches while other packages are
-still building, followed by a final flush when the build step ends.
+Completed outputs are uploaded in low-priority one-minute batches while other
+packages are still building, followed by a final flush when the build step ends.
 
 Keep public bucket URLs and custom domains disabled. The Worker requires a
 read token for downloads and a separate write token for uploads. Its secrets
