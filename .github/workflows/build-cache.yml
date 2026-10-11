@@ -28,11 +28,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
-      # Build inputs can still be large, especially the kernel toolchain.
-      - uses: jlumbroso/free-disk-space@v2.0.0
-        with:
-          swap-storage: false
-          preinstalled-runtimes: false
       - name: Configure private cache access
         env:
           NIX_CACHE_READ_TOKEN: ${{ secrets.NIX_CACHE_READ_TOKEN }}
@@ -41,6 +36,21 @@ jobs:
           umask 077
           printf 'machine abdulrahman1s-nix-cache.citizen6775.workers.dev\nlogin nix\npassword %s\n' \
             "$NIX_CACHE_READ_TOKEN" > "$HOME/.netrc"
+      - name: Check private cache availability
+        run: |
+          status=$(curl --netrc-file "$HOME/.netrc" --silent --show-error \
+            --retry 3 --connect-timeout 10 --max-time 30 \
+            --output /dev/null --write-out '%{http_code}' \
+            https://abdulrahman1s-nix-cache.citizen6775.workers.dev/nix-cache-info)
+          case "$status" in
+            200|404) ;;
+            *) echo "Private cache returned HTTP $status" >&2; exit 1 ;;
+          esac
+      # Build inputs can still be large, especially the kernel toolchain.
+      - uses: jlumbroso/free-disk-space@v2.0.0
+        with:
+          swap-storage: false
+          preinstalled-runtimes: false
       - name: Prepare post-build hook
         run: install -m 0555 .github/scripts/record-nix-build.sh /tmp/record-nix-build
       - uses: cachix/install-nix-action@v31
