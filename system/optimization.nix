@@ -1,5 +1,5 @@
 # Performance, storage, and general system optimizations.
-{ inputs, pkgs, ... }:
+{ inputs, lib, pkgs, ... }:
 
 let
   # ── Sysctl tunables (grouped by subsystem) ───────────────
@@ -70,6 +70,10 @@ in
 
   # ── Kernel / Boot ───────────────────────────────────────
   boot = {
+    # Favor short interactive bursts when CPU-heavy work fills every core.
+    # Hardware configuration selects the default CachyOS variant, so this
+    # deliberately replaces only that kernel choice.
+    kernelPackages = lib.mkForce pkgs.cachyosKernels.linuxPackages-cachyos-bore-x86_64-v3;
     kernel.sysctl = memSysctl // netSysctl // fsSysctl // miscSysctl;
     kernelModules = [ "ntsync" ]; # Native NT synchronization for modern Wine/Proton.
     kernelParams = [

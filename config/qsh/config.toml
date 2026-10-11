@@ -15,9 +15,9 @@ provider = "gemini"
 # env var (e.g. $ANTHROPIC_API_KEY). `model` falls back to the matching
 # *_MODEL env var, then the built-in default for that provider.
 
-# [providers.gemini]
+[providers.gemini]
 # api_key = "..."
-# model   = "gemini-3.5-flash"
+model = "gemini-3.8-flash"
 # [providers.gemini.tokens]
 # fast  = 500                  # max output tokens in fast mode
 # smart = 16000                # max output tokens in smart mode
@@ -25,7 +25,7 @@ provider = "gemini"
 [providers.openai]
 backend = "cli"
 # api_key = "..."
-# model   = "gpt-5.4-mini"
+model = "gpt-6.1-sol"
 # [providers.openai.tokens]
 # fast  = 500
 # smart = 16000
