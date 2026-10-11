@@ -18,19 +18,6 @@ function forbidden() {
   return new Response("Forbidden", { status: 403 });
 }
 
-async function readObject(env, key, headOnly) {
-  const read = () => headOnly ? env.CACHE.head(key) : env.CACHE.get(key);
-  let object = await read();
-
-  // A narinfo is only published after its archive upload completes. Briefly
-  // retry an unexpected archive miss so Nix does not fall back to a local build.
-  for (let attempt = 1; !object && key.startsWith("nar/") && attempt < 3; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, attempt * 100));
-    object = await read();
-  }
-  return object;
-}
-
 async function upload(request, env, key, url) {
   if (!env.WRITE_TOKEN || request.headers.get("Authorization") !== `Bearer ${env.WRITE_TOKEN}`) {
     return forbidden();
@@ -92,7 +79,7 @@ export default {
     if (!env.READ_TOKEN || request.headers.get("Authorization") !== `Basic ${btoa(`nix:${env.READ_TOKEN}`)}`) {
       return unauthorized();
     }
-    const object = await readObject(env, key, request.method === "HEAD");
+    const object = request.method === "HEAD" ? await env.CACHE.head(key) : await env.CACHE.get(key);
     if (!object) {
       return new Response("Not found", { status: 404 });
     }
