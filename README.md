@@ -136,11 +136,11 @@ R2 bucket `abdulrahman1s-nix-cache` through an
 signing key are declared in both [`flake.nix`](flake.nix) and
 [`configuration.nix`](configuration.nix).
 Outputs available from other configured caches are substituted and are not
-uploaded to R2. Each direct package build has a 45-minute limit. Failed
-derivation hashes are recorded privately in R2 so later runs can continue with
-the remaining packages without repeating known failures. A manually dispatched
-run can enable **Retry unchanged failures**; changed derivations retry
-automatically because their store hashes change.
+uploaded to R2. Each direct package build has a 45-minute limit, while the
+kernel gets 120 minutes. Failed derivation hashes are recorded privately in R2
+so later runs can continue with the remaining packages without repeating known
+failures. A manually dispatched run can enable **Retry unchanged failures**;
+changed derivations retry automatically because their store hashes change.
 
 Keep public bucket URLs and custom domains disabled. The Worker requires a
 read token for downloads and a separate write token for uploads. Its secrets

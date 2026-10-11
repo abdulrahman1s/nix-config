@@ -11,6 +11,10 @@ extra-trusted-public-keys = $(jq -r '."extra-trusted-public-keys" | join(" ")' <
 nix eval --json .#nixosConfigurations.default \
   --apply 'n: builtins.map (p: "${p.drvPath}^${p.outputName}") (n.config.environment.systemPackages ++ n.config.users.users.abdulrahman.packages ++ n.config.services.udev.packages ++ n.config.boot.extraModulePackages ++ [ n.config.boot.kernelPackages.kernel ])' \
   --no-update-lock-file | jq -r '.[]' | sort -u > /tmp/nix-cache-candidates
+kernel_drv=$(nix eval --raw \
+  .#nixosConfigurations.default.config.boot.kernelPackages.kernel.drvPath \
+  --no-update-lock-file)
+export kernel_drv
 
 mapfile -t targets < /tmp/nix-cache-candidates
 
@@ -62,9 +66,13 @@ failure_dir=$(mktemp -d)
 export failure_dir
 build_target() {
   local target=$1
+  local limit=45m
   local result
+  if [[ "${target%%^*}" == "$kernel_drv" ]]; then
+    limit=120m
+  fi
   result=$(printf '%s' "$target" | sha256sum | cut -d ' ' -f 1)
-  if ! timeout --signal=TERM --kill-after=2m 45m \
+  if ! timeout --signal=TERM --kill-after=2m "$limit" \
     nix build --no-link --no-update-lock-file \
       --option max-jobs 1 --option cores 2 "$target"; then
     printf '%s\n' "$target" > "$failure_dir/$result"
