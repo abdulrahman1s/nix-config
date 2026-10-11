@@ -4,7 +4,16 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      retry_failed:
+        description: Retry unchanged derivations that failed before
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      retry_failed:
+        type: boolean
+        default: false
     secrets:
       NIX_CACHE_SIGNING_KEY:
         required: true
@@ -64,6 +73,8 @@ jobs:
             netrc-file = /home/runner/.netrc
       - name: Build packages missing from substituters
         id: build
+        env:
+          RETRY_FAILED: ${{ inputs.retry_failed }}
         run: bash .github/scripts/build-cache-targets.sh
       - name: Publish built paths to private R2
         if: ${{ always() && steps.build.outcome != 'skipped' }}

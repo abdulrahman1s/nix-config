@@ -127,16 +127,20 @@ Review the lock-file diff and successful build before switching.
 
 ## Binary cache
 
-The [cache workflow](.github/workflows/build-cache.yml) builds the default
-NixOS configuration on every push to `master` and after the nightly updater,
-which refreshes all inputs in `flake.lock`. It uploads only system closure
-outputs built by GitHub Actions to the private Cloudflare
+The [cache workflow](.github/workflows/build-cache.yml) checks installed package
+outputs on every push to `master` and after the nightly updater, which refreshes
+all inputs in `flake.lock`. It builds only package outputs missing from the
+configured substituters and uploads only outputs built by GitHub Actions to the private Cloudflare
 R2 bucket `abdulrahman1s-nix-cache` through an
 [authenticated Worker](cloudflare/nix-cache/worker.js). The cache URL and public
 signing key are declared in both [`flake.nix`](flake.nix) and
 [`configuration.nix`](configuration.nix).
 Outputs available from other configured caches are substituted and are not
-uploaded to R2.
+uploaded to R2. Each direct package build has a 45-minute limit. Failed
+derivation hashes are recorded privately in R2 so later runs can continue with
+the remaining packages without repeating known failures. A manually dispatched
+run can enable **Retry unchanged failures**; changed derivations retry
+automatically because their store hashes change.
 
 Keep public bucket URLs and custom domains disabled. The Worker requires a
 read token for downloads and a separate write token for uploads. Its secrets

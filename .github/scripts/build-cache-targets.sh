@@ -23,16 +23,81 @@ cut -d '^' -f 1 /tmp/nix-cache-candidates | sort -u > /tmp/nix-cache-candidate-d
 comm -12 /tmp/nix-cache-candidate-drvs /tmp/nix-cache-planned-builds \
   > /tmp/nix-cache-needed
 
-mapfile -t needed_drvs < /tmp/nix-cache-needed
-echo "Building ${#needed_drvs[@]} installed packages absent from substituters."
-if (( ${#needed_drvs[@]} == 0 )); then
-  exit 0
-fi
-
-targets=()
+needed_targets=()
 while IFS= read -r target; do
   if grep -Fxq "${target%%^*}" /tmp/nix-cache-needed; then
-    targets+=("$target")
+    needed_targets+=("$target")
   fi
 done < /tmp/nix-cache-candidates
-nix build --keep-going --no-link --no-update-lock-file "${targets[@]}"
+
+failure_state=/tmp/nix-cache-failed-targets
+next_failure_state=/tmp/nix-cache-failed-targets-next
+: > "$failure_state"
+: > "$next_failure_state"
+status=$(curl --netrc-file "$HOME/.netrc" --silent --show-error \
+  --retry 3 --connect-timeout 10 --max-time 30 \
+  --output "$failure_state" --write-out '%{http_code}' \
+  https://abdulrahman1s-nix-cache.citizen6775.workers.dev/ci/failed-targets)
+case "$status" in
+  200) sort -u -o "$failure_state" "$failure_state" ;;
+  404) : > "$failure_state" ;;
+  *) echo "Failed build state returned HTTP $status" >&2; exit 1 ;;
+esac
+
+retry_failed=${RETRY_FAILED:-false}
+targets_to_build=()
+for target in "${needed_targets[@]}"; do
+  if [[ "$retry_failed" != true ]] && grep -Fxq "$target" "$failure_state"; then
+    printf '%s\n' "$target" >> "$next_failure_state"
+  else
+    targets_to_build+=("$target")
+  fi
+done
+
+echo "${#needed_targets[@]} installed packages are absent from substituters."
+echo "Skipping $(wc -l < "$next_failure_state") unchanged derivations that failed before."
+echo "Building ${#targets_to_build[@]} package derivations."
+
+failure_dir=$(mktemp -d)
+export failure_dir
+build_target() {
+  local target=$1
+  local result
+  result=$(printf '%s' "$target" | sha256sum | cut -d ' ' -f 1)
+  if ! timeout --signal=TERM --kill-after=2m 45m \
+    nix build --no-link --no-update-lock-file \
+      --option max-jobs 1 --option cores 2 "$target"; then
+    printf '%s\n' "$target" > "$failure_dir/$result"
+  fi
+}
+export -f build_target
+
+if (( ${#targets_to_build[@]} > 0 )); then
+  printf '%s\0' "${targets_to_build[@]}" \
+    | xargs -0 -r -n 1 -P 2 bash -c 'build_target "$1"' _
+fi
+
+for failure in "$failure_dir"/*; do
+  [[ -e "$failure" ]] || continue
+  cat "$failure" >> "$next_failure_state"
+done
+sort -u -o "$next_failure_state" "$next_failure_state"
+
+failed_count=$(wc -l < "$next_failure_state")
+if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+  {
+    echo '### Nix cache build'
+    echo
+    echo "- Missing from binary caches: ${#needed_targets[@]}"
+    echo "- Attempted now: ${#targets_to_build[@]}"
+    echo "- Remembered failures: $failed_count"
+    if (( failed_count > 0 )); then
+      echo
+      echo 'Failed derivations are skipped until their hash changes or a manual run enables **Retry unchanged failures**.'
+    fi
+  } >> "$GITHUB_STEP_SUMMARY"
+fi
+
+if (( failed_count > 0 )); then
+  echo "$failed_count package derivations remain unavailable; successful builds will still be published."
+fi

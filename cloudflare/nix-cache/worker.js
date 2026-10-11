@@ -1,9 +1,10 @@
 const storeHash = "[0-9a-df-np-sv-z]{32}";
 const narinfo = new RegExp(`^${storeHash}\\.narinfo$`);
 const nar = /^nar\/[0-9a-z]+\.nar\.zst$/;
+const ciMetadata = /^ci\/[a-z0-9-]+$/;
 
 function validKey(key) {
-  return key === "nix-cache-info" || narinfo.test(key) || nar.test(key);
+  return key === "nix-cache-info" || narinfo.test(key) || nar.test(key) || ciMetadata.test(key);
 }
 
 function unauthorized() {

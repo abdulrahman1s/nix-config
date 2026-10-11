@@ -76,12 +76,16 @@ def upload(key, path, auth_config):
 def main():
     if not BASE_URL.startswith("https://") or not TOKEN:
         raise RuntimeError("NIX_CACHE_URL and NIX_CACHE_WRITE_TOKEN are required")
-    cache = Path(sys.argv[1])
-    nars = sorted((cache / "nar").glob("*.nar.zst"))
-    narinfos = sorted(cache.glob("*.narinfo"))
     with tempfile.NamedTemporaryFile(mode="w", prefix="nix-cache-curl-", delete=True) as auth:
         auth.write(f'header = "Authorization: Bearer {TOKEN}"\n')
         auth.flush()
+        if len(sys.argv) == 4 and sys.argv[1] == "--metadata":
+            upload(sys.argv[2], Path(sys.argv[3]), auth.name)
+            return
+
+        cache = Path(sys.argv[1])
+        nars = sorted((cache / "nar").glob("*.nar.zst"))
+        narinfos = sorted(cache.glob("*.narinfo"))
         for path in nars:
             upload(f"nar/{path.name}", path, auth.name)
         upload("nix-cache-info", cache / "nix-cache-info", auth.name)
