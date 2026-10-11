@@ -15,7 +15,7 @@ wrappers on the daily-driver system.
 
 The daily workflow checks official releases for the seven binary packages.
 It pins their versions and hashes in `versions.json`, updates the
-`noctalia` flake input, builds all nine
+all flake inputs, builds all nine
 packages, evaluates the NixOS system, and commits passing updates to the
 repository's default branch. Updates take effect on the machine only after
 the flake is pulled and the system is activated separately. GitHub Actions

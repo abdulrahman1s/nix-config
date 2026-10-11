@@ -27,7 +27,10 @@ in
   claude-code = pkgs.claude-code.override {
     manifest = {
       version = versions.claude.version;
-      platforms.linux-x64.checksum = versions.claude.sha256;
+      platforms.linux-x64 = {
+        binary = "claude";
+        checksum = versions.claude.sha256;
+      };
     };
   };
 
