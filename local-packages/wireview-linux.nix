@@ -43,7 +43,7 @@ stdenv.mkDerivation {
 
   src = fetchurl {
     url = "https://github.com/emaspa/wireview-linux/releases/download/v${version}/wireview-linux-${version}-linux-x64.tar.gz";
-    hash = "sha256-89B6F8RdJoPJbaKu76k3g+82qZMbzMKiz2FQiuOaXp0=";
+    hash = "sha256-mH5wCo81Y6eO07WD0qdjQxgupjHiIvWUq72xWQ9j6c8=";
   };
 
   nativeBuildInputs = [ autoPatchelfHook makeWrapper ];

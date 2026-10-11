@@ -111,9 +111,11 @@
             nixpkgs.overlays = [
               nix-cachyos-kernel.overlays.pinned
               (_final: prev: {
-                # Nixpkgs switches this test fixture to /bin/sh but leaves Bash conditionals.
+                # One upstream test fixture uses Bash conditionals under /bin/sh.
                 protontricks = prev.protontricks.overrideAttrs (old: {
-                  patches = (old.patches or [ ]) ++ [ ./patches/protontricks-posix-test.patch ];
+                  pytestFlagsArray = (old.pytestFlagsArray or [ ]) ++ [
+                    "--deselect=tests/test_flatpak.py::TestGetInaccessiblePaths::test_flatpak_xdg_user_dir"
+                  ];
                 });
               })
             ];
