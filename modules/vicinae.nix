@@ -59,8 +59,10 @@ let
           runHook preInstall
 
           pkgName=$(node -p "require('./package.json').name")
+          extensionDir="''${XDG_CONFIG_HOME:-$HOME/.config}/raycast/extensions/$pkgName"
+          test -d "$extensionDir"
           mkdir -p $out
-          cp -r /build/.config/raycast/extensions/"$pkgName"/* $out/
+          cp -r "$extensionDir"/. $out/
 
           runHook postInstall
         '';
