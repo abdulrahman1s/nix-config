@@ -1,0 +1,63 @@
+name: Build NixOS cache
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      NIX_CACHE_SIGNING_KEY:
+        required: true
+      NIX_CACHE_READ_TOKEN:
+        required: true
+      NIX_CACHE_WRITE_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nixos-cache-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      # The running system closure is around 28 GiB, larger than the runner's
+      # initial free space. Remove unused toolchains before installing Nix.
+      - uses: jlumbroso/free-disk-space@v2.0.0
+        with:
+          swap-storage: false
+          preinstalled-runtimes: false
+      - name: Configure private cache access
+        env:
+          NIX_CACHE_READ_TOKEN: ${{ secrets.NIX_CACHE_READ_TOKEN }}
+        run: |
+          : "${NIX_CACHE_READ_TOKEN:?Missing NIX_CACHE_READ_TOKEN secret}"
+          umask 077
+          printf 'machine abdulrahman1s-nix-cache.citizen6775.workers.dev\nlogin nix\npassword %s\n' \
+            "$NIX_CACHE_READ_TOKEN" > "$HOME/.netrc"
+      - name: Prepare post-build hook
+        run: install -m 0555 .github/scripts/record-nix-build.sh /tmp/record-nix-build
+      - uses: cachix/install-nix-action@v31
+        with:
+          install_options: --no-daemon
+          extra_nix_config: |
+            accept-flake-config = true
+            max-jobs = 2
+            cores = 2
+            post-build-hook = /tmp/record-nix-build
+            netrc-file = /home/runner/.netrc
+      - name: Build the daily-driver system
+        run: nix build .#nixosConfigurations.default.config.system.build.toplevel --out-link /tmp/nix-cache-system --no-update-lock-file
+      - name: Publish built paths to private R2
+        env:
+          NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
+          NIX_CACHE_WRITE_TOKEN: ${{ secrets.NIX_CACHE_WRITE_TOKEN }}
+          NIX_CACHE_URL: https://abdulrahman1s-nix-cache.citizen6775.workers.dev
+        run: sh .github/scripts/publish-nix-cache.sh

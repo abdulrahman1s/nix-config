@@ -50,3 +50,10 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'Update maintained Nix packages'
           git push
+  cache:
+    needs: update
+    uses: ./.github/workflows/build-cache.yml
+    secrets:
+      NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
+      NIX_CACHE_READ_TOKEN: ${{ secrets.NIX_CACHE_READ_TOKEN }}
+      NIX_CACHE_WRITE_TOKEN: ${{ secrets.NIX_CACHE_WRITE_TOKEN }}

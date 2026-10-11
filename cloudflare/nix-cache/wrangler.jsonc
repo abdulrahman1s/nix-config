@@ -1,0 +1,14 @@
+{
+  "name": "abdulrahman1s-nix-cache",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-11",
+  "secrets": {
+    "required": ["READ_TOKEN", "WRITE_TOKEN"]
+  },
+  "r2_buckets": [
+    {
+      "binding": "CACHE",
+      "bucket_name": "abdulrahman1s-nix-cache"
+    }
+  ]
+}

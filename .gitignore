@@ -2,6 +2,7 @@
 result
 result-*
 .direnv/
+.wrangler/
 
 # Local credentials and environment
 .env

@@ -8,11 +8,13 @@
       "https://cache.nixos-cuda.org"
       "https://attic.xuyh0120.win/lantian" # primary cache for nix-cachyos-kernel
       "https://noctalia.cachix.org" # pre-built Noctalia v5
+      "https://abdulrahman1s-nix-cache.citizen6775.workers.dev" # Authenticated R2 cache
     ];
     extra-trusted-public-keys = [
       "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
       "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
       "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+      "abdulrahman1s-r2-cache-2:0FLUhIO7qwnRhMc2pzOp8lC8AFO67a7JKbzZugSpo8M="
     ];
   };
 

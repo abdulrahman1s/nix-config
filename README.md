@@ -125,6 +125,30 @@ sudo nixos-rebuild switch --flake .#default
 
 Review the lock-file diff and successful build before switching.
 
+## Binary cache
+
+The [cache workflow](.github/workflows/build-cache.yml) builds the default
+NixOS configuration on every push to `master` and after the nightly package
+updater. It uploads outputs built by GitHub Actions to the private Cloudflare
+R2 bucket `abdulrahman1s-nix-cache` through an
+[authenticated Worker](cloudflare/nix-cache/worker.js). The cache URL and public
+signing key are declared in both [`flake.nix`](flake.nix) and
+[`configuration.nix`](configuration.nix).
+
+Keep public bucket URLs and custom domains disabled. The Worker requires a
+read token for downloads and a separate write token for uploads. Its secrets
+are `READ_TOKEN` and `WRITE_TOKEN`. GitHub Actions uses repository secrets
+`NIX_CACHE_READ_TOKEN`, `NIX_CACHE_WRITE_TOKEN`, and
+`NIX_CACHE_SIGNING_KEY`. This machine keeps the read token in the persisted
+`~/.aws/nix-cache.netrc` file, which the Nix daemon reads through
+`nix.settings.netrc-file`. Unauthenticated requests cannot read or write R2
+objects. Never commit any of these secrets.
+
+Wait for a successful cache workflow for the committed configuration before
+rebuilding this machine. Local, unpushed edits can still require local builds;
+Nix also falls back to a local build if CI fails or a cache path is unavailable.
+R2 storage and request usage may incur charges as old cache objects accumulate.
+
 ## License
 
 [MIT](LICENSE). Third-party packages keep their own licenses.
