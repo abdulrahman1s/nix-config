@@ -28,7 +28,7 @@ in
     manifest = {
       version = versions.claude.version;
       platforms.linux-x64 = {
-        binary = "claude";
+        binary = "claude.zst";
         checksum = versions.claude.sha256;
       };
     };

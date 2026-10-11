@@ -104,7 +104,7 @@ fi
 claude_release=$(release anthropics/claude-code)
 claude_version=$(jq -er '.tag_name | sub("^v"; "")' <<< "$claude_release")
 if [[ $claude_version != "$(jq -er '.claude.version' <<< "$versions")" ]]; then
-  manifest=$(get_json "https://downloads.claude.ai/claude-code-releases/$claude_version/manifest.json")
+  manifest=$(get_json "https://downloads.claude.ai/claude-code-releases/$claude_version/manifest.zst.json")
   if [[ $(jq -er '.version' <<< "$manifest") != "$claude_version" ]]; then
     echo 'Claude release and official manifest disagree' >&2
     exit 1

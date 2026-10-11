@@ -116,10 +116,10 @@ in
     };
 
     # Journal size cap
-    journald.extraConfig = ''
-      SystemMaxUse=1G
-      MaxRetentionSec=14d
-    '';
+    journald.settings.Journal = {
+      SystemMaxUse = "1G";
+      MaxRetentionSec = "14d";
+    };
   };
 
   # ── Security ulimits ────────────────────────────────────
