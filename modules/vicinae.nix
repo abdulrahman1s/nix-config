@@ -22,7 +22,15 @@ let
     );
 
   mkRayCastExtension =
-    { name, src ? null, rev ? null, hash ? null, sha256 ? null, ... }@attrs:
+    {
+      name,
+      lockRoot,
+      src ? null,
+      rev ? null,
+      hash ? null,
+      sha256 ? null,
+      ...
+    }@attrs:
     let
       resolvedSrc =
         if src != null then
@@ -49,11 +57,20 @@ let
           + "/extensions/${name}";
     in
     pkgs.buildNpmPackage (
-      (removeAttrs attrs [ "name" "src" "rev" "hash" "sha256" ])
+      (removeAttrs attrs [
+        "name"
+        "lockRoot"
+        "src"
+        "rev"
+        "hash"
+        "sha256"
+      ])
       // {
         inherit name;
         src = resolvedSrc;
-        npmDeps = attrs.npmDeps or (pkgs.importNpmLock { npmRoot = resolvedSrc; });
+        # Keep lock metadata in the flake so evaluation does not have to realize
+        # the fetched extension source before it can calculate this derivation.
+        npmDeps = attrs.npmDeps or (pkgs.importNpmLock { npmRoot = lockRoot; });
         npmConfigHook = attrs.npmConfigHook or pkgs.importNpmLock.npmConfigHook;
         installPhase = attrs.installPhase or ''
           runHook preInstall
@@ -91,12 +108,14 @@ let
 
     google-search = mkRayCastExtension {
       name = "google-search";
+      lockRoot = ../local-packages/vicinae-locks/google-search;
       rev = "870667fc671801a467deb7c4c7fc72992efe3820";
       hash = "sha256-yqY2OliYYHHW7TiCsrbb8qxEHJhY2gRZ90ZlDxHmUng=";
     };
 
     google-translate = mkRayCastExtension {
       name = "google-translate";
+      lockRoot = ../local-packages/vicinae-locks/google-translate;
       rev = "870667fc671801a467deb7c4c7fc72992efe3820";
       hash = "sha256-xTA6Aa+cTmpGu80BokfFaHCGWOLCSWE1SrYhqSOi/Jo=";
     };

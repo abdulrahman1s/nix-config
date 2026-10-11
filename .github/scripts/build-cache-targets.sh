@@ -7,6 +7,20 @@ export NIX_CONFIG="${NIX_CONFIG:-}
 extra-substituters = $(jq -r '."extra-substituters" | join(" ")' <<< "$cache_config")
 extra-trusted-public-keys = $(jq -r '."extra-trusted-public-keys" | join(" ")' <<< "$cache_config")"
 
+# Some modules read fetched sources while evaluating the system. Record only
+# fixed-output paths realized by that evaluation so cache-only clients can
+# evaluate without also retaining every package source tarball.
+: > /tmp/nix-cache-built-paths
+nix eval --raw \
+  .#nixosConfigurations.default.config.system.build.toplevel.drvPath \
+  --no-update-lock-file > /dev/null
+if [[ -s /tmp/nix-cache-built-paths ]]; then
+  cut -f 2 /tmp/nix-cache-built-paths | sort -u \
+    > /tmp/nix-cache-evaluation-paths
+else
+  : > /tmp/nix-cache-evaluation-paths
+fi
+
 # Evaluate installed packages without realizing the full NixOS system closure.
 nix eval --json .#nixosConfigurations.default \
   --apply 'n: builtins.map (p: "${p.drvPath}^${p.outputName}") (n.config.environment.systemPackages ++ n.config.users.users.abdulrahman.packages ++ n.config.services.udev.packages ++ n.config.boot.extraModulePackages ++ [ n.config.boot.kernelPackages.kernel ])' \

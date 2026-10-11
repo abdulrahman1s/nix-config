@@ -12,7 +12,8 @@ touch "$uploaded_paths"
 
 if [ -s /tmp/nix-cache-built-paths ]; then
   python3 .github/scripts/select-built-paths.py \
-    /tmp/nix-cache-built-paths "$uploaded_paths" > "$new_paths"
+    /tmp/nix-cache-built-paths "$uploaded_paths" \
+    /tmp/nix-cache-evaluation-paths > "$new_paths"
 else
   : > "$new_paths"
 fi
