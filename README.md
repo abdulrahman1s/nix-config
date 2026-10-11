@@ -130,8 +130,8 @@ Review the lock-file diff and successful build before switching.
 The [cache workflow](.github/workflows/build-cache.yml) checks installed package
 outputs on every push to `master` and after the nightly updater, which refreshes
 all inputs in `flake.lock`. It builds only package outputs missing from the
-configured substituters and uploads only outputs built by GitHub Actions to the private Cloudflare
-R2 bucket `abdulrahman1s-nix-cache` through an
+configured substituters and uploads only outputs built by GitHub Actions to the
+private Cloudflare R2 bucket `abdulrahman1s-nix-cache` through an
 [authenticated Worker](cloudflare/nix-cache/worker.js). The cache URL and public
 signing key are declared in both [`flake.nix`](flake.nix) and
 [`configuration.nix`](configuration.nix).
@@ -141,6 +141,8 @@ kernel gets 120 minutes. Failed derivation hashes are recorded privately in R2
 so later runs can continue with the remaining packages without repeating known
 failures. A manually dispatched run can enable **Retry unchanged failures**;
 changed derivations retry automatically because their store hashes change.
+Completed outputs are uploaded in low-priority batches while other packages are
+still building, followed by a final flush when the build step ends.
 
 Keep public bucket URLs and custom domains disabled. The Worker requires a
 read token for downloads and a separate write token for uploads. Its secrets
