@@ -60,6 +60,8 @@
       "abdulrahman1s-r2-cache-2:0FLUhIO7qwnRhMc2pzOp8lC8AFO67a7JKbzZugSpo8M="
     ];
     netrc-file = "/home/${username}/.aws/nix-cache.netrc";
+    # CI can publish a path moments after a local cache miss; check again immediately.
+    narinfo-cache-negative-ttl = 0;
     http-connections = 50;
     warn-dirty = false;
     # During builds, collect only unreachable store paths before free space
