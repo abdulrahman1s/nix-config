@@ -3,18 +3,16 @@ set -eu
 : "${NIX_CACHE_SIGNING_KEY:?Missing NIX_CACHE_SIGNING_KEY secret}"
 
 cache=/tmp/nix-cache-upload
-closure=/tmp/nix-cache-closure
 new_paths=/tmp/nix-cache-new-paths
 
-nix-store --query --requisites /tmp/nix-cache-system | sort -u > "$closure"
 if [ ! -s /tmp/nix-cache-built-paths ]; then
   echo 'No new paths were built; the existing R2 cache is current.'
   exit 0
 fi
 
-sort -u /tmp/nix-cache-built-paths | comm -12 - "$closure" > "$new_paths"
+python3 .github/scripts/select-built-paths.py > "$new_paths"
 if [ ! -s "$new_paths" ]; then
-  echo 'No newly built paths belong to the system closure.'
+  echo 'No packages were built locally on the runner.'
   exit 0
 fi
 

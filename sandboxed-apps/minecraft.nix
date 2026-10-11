@@ -3,11 +3,6 @@
 let
   sklauncher = inputs.self.packages.${pkgs.system}.sklauncher;
 
-  icon = pkgs.fetchurl {
-    url = "https://minecraft.wiki/images/Bedrock_Edition_Google_Play_icon_1.png?daf7c?download"; # From https://minecraft.wiki/w/Logo
-    hash = "sha256-PsKTTpqbPcwv+GDRvFh8Ass2HiqP3DL6tjglOZpINKA=";
-  };
-
   minecraft-pkg = pkgs.symlinkJoin {
     name = "minecraft";
     paths = [
@@ -19,15 +14,11 @@ let
       (pkgs.makeDesktopItem {
         name = "minecraft";
         exec = "minecraft";
-        icon = "minecraft";
+        icon = "applications-games";
         desktopName = "Minecraft";
         categories = [ "Game" ];
       })
     ];
-    postBuild = ''
-      mkdir -p $out/share/icons/hicolor/256x256/apps
-      ln -s ${icon} $out/share/icons/hicolor/256x256/apps/minecraft.png
-    '';
   };
 
 in
