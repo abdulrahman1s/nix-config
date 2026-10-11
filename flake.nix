@@ -107,7 +107,17 @@
           github-fs.nixosModules.default
           impermanence.nixosModules.impermanence
           hjem.nixosModules.default
-          { nixpkgs.overlays = [ nix-cachyos-kernel.overlays.pinned ]; }
+          {
+            nixpkgs.overlays = [
+              nix-cachyos-kernel.overlays.pinned
+              (_final: prev: {
+                # Nixpkgs switches this test fixture to /bin/sh but leaves Bash conditionals.
+                protontricks = prev.protontricks.overrideAttrs (old: {
+                  patches = (old.patches or [ ]) ++ [ ./patches/protontricks-posix-test.patch ];
+                });
+              })
+            ];
+          }
           nixos-hardware.nixosModules.asus-rog-strix-x570e
           nixos-hardware.nixosModules.common-gpu-nvidia-nonprime
           nixos-hardware.nixosModules.common-pc
