@@ -62,6 +62,8 @@
     netrc-file = "/home/${username}/.aws/nix-cache.netrc";
     # CI can publish a path moments after a local cache miss; check again immediately.
     narinfo-cache-negative-ttl = 0;
+    # Build on GitHub Actions; fail locally if an output is absent from every cache.
+    max-jobs = 0;
     http-connections = 50;
     warn-dirty = false;
     # During builds, collect only unreachable store paths before free space
