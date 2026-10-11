@@ -83,8 +83,21 @@ jobs:
           uploader_pid=$!
           trap 'touch /tmp/nix-cache-stop-uploader; wait "$uploader_pid"' EXIT
           bash .github/scripts/build-cache-targets.sh
+      - name: Build NixOS system for local substitution
+        id: system
+        env:
+          NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
+          NIX_CACHE_WRITE_TOKEN: ${{ secrets.NIX_CACHE_WRITE_TOKEN }}
+          NIX_CACHE_URL: https://abdulrahman1s-nix-cache.citizen6775.workers.dev
+        run: |
+          rm -f /tmp/nix-cache-stop-uploader
+          sh .github/scripts/upload-built-paths-loop.sh &
+          uploader_pid=$!
+          trap 'touch /tmp/nix-cache-stop-uploader; wait "$uploader_pid"' EXIT
+          nix build .#nixosConfigurations.default.config.system.build.toplevel \
+            --no-link --no-update-lock-file
       - name: Publish built paths to private R2
-        if: ${{ always() && steps.build.outcome != 'skipped' }}
+        if: ${{ always() && (steps.build.outcome != 'skipped' || steps.system.outcome != 'skipped') }}
         env:
           NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
           NIX_CACHE_WRITE_TOKEN: ${{ secrets.NIX_CACHE_WRITE_TOKEN }}
