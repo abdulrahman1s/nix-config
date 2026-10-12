@@ -30,28 +30,48 @@ function canWrite(request, env) {
   );
 }
 
-async function purgeCache(request, env) {
+async function listCacheObjects(request, env, url) {
   if (!canWrite(request, env)) {
     return forbidden();
   }
-  if (request.method !== "DELETE") {
+  if (request.method !== "GET") {
     return new Response("Method not allowed", { status: 405 });
   }
-
-  // Keep generation markers so failed replacement builds can resume safely.
-  const keep = new Set([
-    "nix-cache-info",
-    "ci/flake-lock-hash",
-    "ci/pending-flake-lock-hash",
-  ]);
-  const objects = await env.CACHE.list({ limit: 1000 });
-  const keys = objects.objects
-    .map((object) => object.key)
-    .filter((key) => !keep.has(key));
-  if (keys.length > 0) {
-    await env.CACHE.delete(keys);
+  const cursor = url.searchParams.get("cursor");
+  if (cursor && cursor.length > 2048) {
+    return new Response("Invalid cursor", { status: 400 });
   }
-  return Response.json({ deleted: keys.length });
+  const page = await env.CACHE.list({ limit: 1000, ...(cursor ? { cursor } : {}) });
+  return Response.json({
+    objects: page.objects.map((object) => ({ key: object.key, size: object.size })),
+    cursor: page.truncated ? page.cursor : null,
+  });
+}
+
+async function pruneCache(request, env) {
+  if (!canWrite(request, env)) {
+    return forbidden();
+  }
+  if (request.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+  const keys = body?.keys;
+  if (
+    !Array.isArray(keys) ||
+    keys.length === 0 ||
+    keys.length > 1000 ||
+    keys.some((key) => typeof key !== "string" || !(narinfo.test(key) || nar.test(key)))
+  ) {
+    return new Response("Invalid cache object keys", { status: 400 });
+  }
+  await env.CACHE.delete([...new Set(keys)]);
+  return Response.json({ deleted: new Set(keys).size });
 }
 
 async function upload(request, env, key, url) {
@@ -101,8 +121,11 @@ async function upload(request, env, key, url) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/admin/purge-cache") {
-      return purgeCache(request, env);
+    if (url.pathname === "/admin/cache-objects") {
+      return listCacheObjects(request, env, url);
+    }
+    if (url.pathname === "/admin/prune-cache") {
+      return pruneCache(request, env);
     }
     const isUpload = url.pathname.startsWith("/upload/");
     const key = decodeURIComponent(url.pathname.slice(isUpload ? 8 : 1));

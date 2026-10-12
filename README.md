@@ -136,18 +136,21 @@ GitHub Actions to the private Cloudflare R2 bucket
 [Worker](cloudflare/nix-cache/worker.js). The cache URL and public signing key
 are declared in both [`flake.nix`](flake.nix) and
 [`configuration.nix`](configuration.nix).
-When the committed `flake.lock` digest changes, the workflow asks the Worker to
-purge old NARs, narinfo files, and remembered build failures before rebuilding.
-It records the new digest only after the complete NixOS build and final upload
-succeed. A separate pending digest lets a failed run keep its partial uploads
-and resume the incomplete cache generation without purging them again.
+After the complete NixOS build and final upload succeed, the workflow compares
+cached objects with the current system closure and prunes obsolete narinfo and
+NAR objects. This runs daily and after upgrades, including package updates that
+do not change `flake.lock`. Evaluation-time sources are retained so the system
+can still be evaluated from the cache. The lock digest is recorded only after
+pruning succeeds.
 Outputs available from other configured caches are substituted and are not
-uploaded to R2. Each direct package build has a 45-minute limit, while the
-kernel gets 120 minutes. Failed derivation hashes are recorded privately in R2
-so later runs can continue with the remaining packages without repeating known
-failures. A manually dispatched run can enable **Retry unchanged failures**;
+uploaded to R2. CI also enables `always-allow-substitutes` so generated NixOS
+outputs can be reused instead of rebuilt on every run. Each direct package
+build has a 45-minute limit, while the kernel gets 120 minutes. Failed derivation
+hashes are recorded privately in R2 so later runs can continue with the
+remaining packages without repeating known failures. A manually dispatched
+run can enable **Retry unchanged failures**;
 changed derivations retry automatically because their store hashes change.
-Completed outputs are uploaded in low-priority one-minute batches while other
+Completed outputs are uploaded in one-minute batches while other
 packages are still building, followed by a final flush when the build step ends.
 The consolidated cache helper prints compact progress, expands logs for failed
 derivations, and writes the final counts to the GitHub Actions job summary.
@@ -161,14 +164,13 @@ are `READ_TOKEN` and `WRITE_TOKEN`. GitHub Actions uses repository secrets
 `nix.settings.netrc-file`. Unauthenticated requests cannot read or write R2
 objects. Never commit any of these secrets.
 
-Deploy Worker changes before enabling a workflow version that uses a new admin
-operation. Until the purge endpoint is deployed, the workflow safely skips
-rotation and does not mark the new cache generation complete.
+Deploy Worker changes before enabling a workflow version that uses the pruning
+endpoints. The workflow reports an error if they are unavailable.
 
 Wait for a successful cache workflow for the committed configuration before
 rebuilding this machine. Local, unpushed edits can still require local builds;
 Nix also falls back to a local build if CI fails or a cache path is unavailable.
-R2 storage and request usage may incur charges between cache rotations.
+R2 storage and request usage may incur charges between daily pruning runs.
 
 ## License
 

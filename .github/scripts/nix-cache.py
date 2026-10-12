@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build, export, upload, and rotate the private Nix binary cache."""
+"""Build, export, upload, and prune the private Nix binary cache."""
 
 from __future__ import annotations
 
@@ -23,9 +23,11 @@ EVALUATION_PATHS = Path("/tmp/nix-cache-evaluation-paths")
 UPLOADED_PATHS = Path("/tmp/nix-cache-uploaded-paths")
 NEXT_FAILURES = Path("/tmp/nix-cache-failed-targets-next")
 LOCK_DIGEST_KEY = "ci/flake-lock-hash"
-PENDING_DIGEST_KEY = "ci/pending-flake-lock-hash"
+EVALUATION_MANIFEST_KEY = "ci/evaluation-paths"
 PART_SIZE = 8 * 1024 * 1024
 SINGLE_UPLOAD_LIMIT = 50 * 1024 * 1024
+STORE_HASH = re.compile(r"^[0-9a-df-np-sv-z]{32}$")
+NAR_KEY = re.compile(r"^nar/[0-9a-z]+\.nar\.zst$")
 
 
 def github_escape(message: str) -> str:
@@ -78,6 +80,16 @@ def read_lines(path: Path) -> set[str]:
 def write_lines(path: Path, lines: set[str] | list[str]) -> None:
     ordered = sorted(set(lines))
     path.write_text("".join(f"{line}\n" for line in ordered))
+
+
+def readable_size(size: int) -> str:
+    if size >= 1024**3:
+        return f"{size / 1024**3:.2f} GiB"
+    if size >= 1024**2:
+        return f"{size / 1024**2:.1f} MiB"
+    if size >= 1024:
+        return f"{size / 1024:.1f} KiB"
+    return f"{size} B"
 
 
 def record_built_paths() -> None:
@@ -226,62 +238,76 @@ class CacheClient:
     def upload_metadata(self, key: str, contents: str) -> None:
         self.send("PUT", key, data=contents.encode())
 
-    def purge_batch(self) -> int | None:
-        with tempfile.NamedTemporaryFile(prefix="nix-cache-purge-") as response:
-            result = subprocess.run(
-                [
-                    "curl",
-                    "--config",
-                    str(self.auth_config),
-                    "--silent",
-                    "--show-error",
-                    "--retry",
-                    "3",
-                    "--retry-all-errors",
-                    "--connect-timeout",
-                    "10",
-                    "--max-time",
-                    "180",
-                    "--request",
-                    "DELETE",
-                    "--output",
-                    response.name,
-                    "--write-out",
-                    "%{http_code}",
-                    f"{self.base_url}/admin/purge-cache",
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
+    def admin(
+        self, method: str, endpoint: str, *, data: dict | None = None, **query: str
+    ) -> dict:
+        with tempfile.NamedTemporaryFile(prefix="nix-cache-admin-") as response:
+            payload = None
+            if data is not None:
+                payload_fd, payload_name = tempfile.mkstemp(
+                    prefix="nix-cache-admin-body-"
+                )
+                os.close(payload_fd)
+                payload = Path(payload_name)
+                payload.write_text(json.dumps(data))
+            url = f"{self.base_url}/admin/{endpoint}"
+            if query:
+                url += "?" + urlencode(query)
+            command = [
+                "curl",
+                "--config",
+                str(self.auth_config),
+                "--silent",
+                "--show-error",
+                "--retry",
+                "3",
+                "--retry-all-errors",
+                "--connect-timeout",
+                "10",
+                "--max-time",
+                "180",
+                "--request",
+                method,
+                "--output",
+                response.name,
+                "--write-out",
+                "%{http_code}",
+                "--url",
+                url,
+            ]
+            if payload is not None:
+                command.extend(("--header", "Content-Type: application/json"))
+                command.extend(("--data-binary", f"@{payload}"))
+            try:
+                result = subprocess.run(
+                    command, check=False, capture_output=True, text=True
+                )
+            finally:
+                if payload is not None:
+                    payload.unlink(missing_ok=True)
             if result.returncode:
                 raise RuntimeError(
-                    f"cache purge request failed: {result.stderr.strip()}"
+                    f"cache admin request failed: {result.stderr.strip()}"
                 )
             status = int(result.stdout)
-            if status == 404:
-                return None
             if status != 200:
                 detail = Path(response.name).read_text(errors="replace").strip()
-                raise RuntimeError(f"cache purge returned HTTP {status}: {detail}")
-            return int(json.loads(Path(response.name).read_text())["deleted"])
-
-    def purge(self) -> int | None:
-        total = 0
-        for _ in range(10000):
-            deleted = self.purge_batch()
-            if deleted is None:
-                return None
-            total += deleted
-            if deleted == 0:
-                return total
-        raise RuntimeError("cache purge did not converge after 10,000 batches")
+                if status == 404:
+                    raise RuntimeError(
+                        "The deployed cache Worker lacks pruning endpoints; deploy "
+                        "cloudflare/nix-cache/worker.js before refreshing the cache"
+                    )
+                raise RuntimeError(
+                    f"cache admin request returned HTTP {status}: {detail}"
+                )
+            return json.loads(Path(response.name).read_text())
 
 
 class Stats:
     def __init__(self) -> None:
         self.generation = "not checked"
-        self.purged = 0
+        self.pruned = 0
+        self.pruned_bytes = 0
         self.missing = 0
         self.attempted = 0
         self.succeeded = 0
@@ -299,7 +325,8 @@ class Stats:
                 "| Result | Count / status |\n"
                 "| --- | ---: |\n"
                 f"| Cache generation | {self.generation} |\n"
-                f"| Purged R2 objects | {self.purged} |\n"
+                f"| Pruned obsolete R2 objects | {self.pruned} |\n"
+                f"| Reclaimed R2 storage | {readable_size(self.pruned_bytes)} |\n"
                 f"| Missing package derivations | {self.missing} |\n"
                 f"| Attempted package derivations | {self.attempted} |\n"
                 f"| Successful package derivations | {self.succeeded} |\n"
@@ -332,46 +359,24 @@ def configure_nix() -> None:
     os.environ["NIX_CONFIG"] = f"{os.environ.get('NIX_CONFIG', '')}\n{extra}"
 
 
-def ensure_generation(client: CacheClient, stats: Stats) -> tuple[str, bool]:
+def check_generation(client: CacheClient, stats: Stats) -> str:
     status, _ = client.read("nix-cache-info")
     if status not in (200, 404):
         raise RuntimeError(f"private cache availability check returned HTTP {status}")
+    client.admin("GET", "cache-objects")
 
     digest = hashlib.sha256(Path("flake.lock").read_bytes()).hexdigest()
     status, body = client.read(LOCK_DIGEST_KEY)
     if status == 200 and body.decode().strip() == digest:
         stats.generation = "current"
         log(f"✓ Cache generation already matches flake.lock ({digest[:12]})")
-        return digest, True
+        return digest
     if status not in (200, 404):
         raise RuntimeError(f"cache generation check returned HTTP {status}")
-
-    pending_status, pending_body = client.read(PENDING_DIGEST_KEY)
-    if pending_status == 200 and pending_body.decode().strip() == digest:
-        stats.generation = "resuming incomplete rotation"
-        log(f"✓ Resuming incomplete cache generation {digest[:12]}")
-        return digest, True
-    if pending_status not in (200, 404):
-        raise RuntimeError(
-            f"pending cache generation check returned HTTP {pending_status}"
-        )
-
     previous = body.decode().strip()[:12] if status == 200 else "untracked"
-    with group("Rotate cache generation"):
-        log(f"• flake.lock changed: {previous} → {digest[:12]}")
-        purged = client.purge()
-        if purged is None:
-            warning(
-                "The deployed cache Worker has no purge endpoint yet; skipping rotation "
-                "and leaving the generation uncommitted"
-            )
-            stats.generation = "purge endpoint unavailable"
-            return digest, False
-        stats.purged = purged
-        stats.generation = "rotated"
-        client.upload_metadata(PENDING_DIGEST_KEY, digest + "\n")
-        log(f"✓ Purged {purged} old R2 objects")
-    return digest, True
+    stats.generation = "pending pruning"
+    log(f"• flake.lock changed: {previous} → {digest[:12]}")
+    return digest
 
 
 def snapshot_built_records() -> list[tuple[str, str]]:
@@ -550,7 +555,9 @@ class IncrementalUploader:
                 warning(f"Incremental cache upload failed; retrying later: {exception}")
 
 
-def evaluate_targets(client: CacheClient, stats: Stats) -> tuple[list[str], str]:
+def evaluate_targets(
+    client: CacheClient, stats: Stats
+) -> tuple[list[str], str, set[str]]:
     with group("Evaluate cache targets"):
         BUILT_PATHS.write_text("")
         EVALUATION_PATHS.write_text("")
@@ -571,29 +578,27 @@ def evaluate_targets(client: CacheClient, stats: Stats) -> tuple[list[str], str]
         write_lines(EVALUATION_PATHS, {path for _, path in snapshot_built_records()})
 
         package_expression = (
-            'n: builtins.map (p: "${p.drvPath}^${p.outputName}") '
+            'n: builtins.map (p: { target = "${p.drvPath}^${p.outputName}"; path = p.outPath; }) '
             "(n.config.environment.systemPackages ++ "
             "builtins.concatMap (u: u.packages) (builtins.attrValues n.config.users.users) ++ "
             "n.config.services.udev.packages ++ n.config.boot.extraModulePackages ++ "
             "[ n.config.boot.kernelPackages.kernel ])"
         )
-        candidates = sorted(
-            set(
-                json.loads(
-                    run(
-                        [
-                            "nix",
-                            "eval",
-                            "--json",
-                            ".#nixosConfigurations.default",
-                            "--apply",
-                            package_expression,
-                            "--no-update-lock-file",
-                        ]
-                    ).stdout
-                )
-            )
+        packages = json.loads(
+            run(
+                [
+                    "nix",
+                    "eval",
+                    "--json",
+                    ".#nixosConfigurations.default",
+                    "--apply",
+                    package_expression,
+                    "--no-update-lock-file",
+                ]
+            ).stdout
         )
+        candidates = sorted({package["target"] for package in packages})
+        package_paths = {package["path"] for package in packages}
         kernel_drv = run(
             [
                 "nix",
@@ -646,7 +651,7 @@ def evaluate_targets(client: CacheClient, stats: Stats) -> tuple[list[str], str]
         log(f"• {len(needed)} derivations missing from configured substituters")
         log(f"• {len(skipped)} unchanged failures skipped")
         log(f"• {len(targets)} derivations queued with two parallel workers")
-        return targets, kernel_drv
+        return targets, kernel_drv, package_paths
 
 
 def target_name(target: str) -> str:
@@ -734,6 +739,137 @@ def build_system(stats: Stats) -> bool:
     return status == 0
 
 
+def store_hash(path: str) -> str:
+    if not path.startswith("/nix/store/"):
+        raise RuntimeError(f"not a Nix store path: {path}")
+    digest = Path(path).name.split("-", 1)[0]
+    if not STORE_HASH.fullmatch(digest):
+        raise RuntimeError(f"invalid Nix store path: {path}")
+    return digest
+
+
+def list_cache_objects(client: CacheClient) -> dict[str, int]:
+    objects = {}
+    cursor = None
+    seen_cursors = set()
+    for _ in range(10000):
+        page = client.admin(
+            "GET", "cache-objects", **({"cursor": cursor} if cursor else {})
+        )
+        page_objects = page.get("objects")
+        if not isinstance(page_objects, list):
+            raise TypeError("cache object listing returned invalid objects")
+        for item in page_objects:
+            if (
+                not isinstance(item, dict)
+                or not isinstance(item.get("key"), str)
+                or not isinstance(item.get("size"), int)
+                or item["size"] < 0
+            ):
+                raise RuntimeError("cache object listing returned invalid metadata")
+            objects[item["key"]] = item["size"]
+        cursor = page.get("cursor")
+        if cursor is None:
+            return objects
+        if not isinstance(cursor, str) or not cursor or cursor in seen_cursors:
+            raise RuntimeError("cache object listing returned an invalid cursor")
+        seen_cursors.add(cursor)
+    raise RuntimeError("cache object listing exceeded 10,000 pages")
+
+
+def nar_for_narinfo(client: CacheClient, key: str) -> str:
+    status, body = client.read(key)
+    if status != 200:
+        raise RuntimeError(f"active narinfo {key} returned HTTP {status}")
+    urls = [
+        line[5:].strip()
+        for line in body.decode().splitlines()
+        if line.startswith("URL: ")
+    ]
+    if len(urls) != 1 or not NAR_KEY.fullmatch(urls[0]):
+        raise RuntimeError(f"active narinfo {key} has no valid NAR URL")
+    return urls[0]
+
+
+def prune_obsolete_cache(
+    client: CacheClient, stats: Stats, package_paths: set[str]
+) -> None:
+    with group("Prune obsolete cache objects"):
+        system_path = run(
+            [
+                "nix",
+                "eval",
+                "--raw",
+                ".#nixosConfigurations.default.config.system.build.toplevel.outPath",
+                "--no-update-lock-file",
+            ]
+        ).stdout.strip()
+        closure = set(
+            run(
+                ["nix-store", "--query", "--requisites", system_path]
+            ).stdout.splitlines()
+        )
+        status, body = client.read(EVALUATION_MANIFEST_KEY)
+        # Evaluation-time builds may be absent on a warm run, but paths from
+        # an older flake.lock must not pin obsolete dependencies forever.
+        if status == 200 and stats.generation == "current":
+            previous_evaluation = set(body.decode().splitlines())
+        elif status in (200, 404):
+            previous_evaluation = set()
+        else:
+            raise RuntimeError(f"evaluation path manifest returned HTTP {status}")
+        evaluation = previous_evaluation | read_lines(EVALUATION_PATHS)
+        live_hashes = {
+            store_hash(path) for path in closure | evaluation | package_paths
+        }
+        log(f"• Preserving {len(live_hashes)} live store paths")
+
+        objects = list_cache_objects(client)
+        narinfos = {
+            key
+            for key in objects
+            if key.endswith(".narinfo")
+            and STORE_HASH.fullmatch(key.removesuffix(".narinfo"))
+        }
+        active_narinfos = sorted(
+            key for key in narinfos if key.removesuffix(".narinfo") in live_hashes
+        )
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            active_nars = set(
+                executor.map(lambda key: nar_for_narinfo(client, key), active_narinfos)
+            )
+        obsolete_narinfos = sorted(narinfos - set(active_narinfos))
+        obsolete_nars = sorted(
+            key for key in objects if NAR_KEY.fullmatch(key) and key not in active_nars
+        )
+        log(
+            f"• {len(obsolete_narinfos)} obsolete narinfos and "
+            f"{len(obsolete_nars)} unreferenced NARs"
+        )
+
+        # Withdraw stale narinfos before removing their archives. A failed batch
+        # leaves only orphan NARs, which the next refresh can remove.
+        client.upload_metadata(
+            EVALUATION_MANIFEST_KEY,
+            "".join(f"{path}\n" for path in sorted(evaluation)),
+        )
+        for keys in (obsolete_narinfos, obsolete_nars):
+            for start in range(0, len(keys), 1000):
+                batch = keys[start : start + 1000]
+                result = client.admin("POST", "prune-cache", data={"keys": batch})
+                if result.get("deleted") != len(batch):
+                    raise RuntimeError(
+                        "cache prune reported an unexpected deletion count"
+                    )
+                stats.pruned += len(batch)
+                stats.pruned_bytes += sum(objects[key] for key in batch)
+
+        log(
+            f"✓ Removed {stats.pruned} obsolete R2 objects "
+            f"({readable_size(stats.pruned_bytes)})"
+        )
+
+
 def run_pipeline() -> None:
     for name in ("NIX_CACHE_SIGNING_KEY", "NIX_CACHE_WRITE_TOKEN"):
         if not os.environ.get(name):
@@ -747,16 +883,16 @@ def run_pipeline() -> None:
     publish_lock = threading.Lock()
     uploader = None
     failure_state_ready = False
-    generation_ready = False
+    package_paths = set()
     lock_digest = ""
     pipeline_error = None
     final_upload_error = None
     try:
-        lock_digest, generation_ready = ensure_generation(client, stats)
+        lock_digest = check_generation(client, stats)
         with group("Configure Nix cache inputs"):
             configure_nix()
             log("✓ Loaded substituters and trusted keys from flake.nix")
-        targets, kernel_drv = evaluate_targets(client, stats)
+        targets, kernel_drv, package_paths = evaluate_targets(client, stats)
         uploader = IncrementalUploader(client, stats, publish_lock)
         uploader.start()
         build_packages(targets, kernel_drv, stats)
@@ -778,14 +914,14 @@ def run_pipeline() -> None:
         except Exception as exception:  # noqa: BLE001 - preserve the pipeline failure.
             final_upload_error = exception
 
-        if pipeline_error is None and final_upload_error is None and generation_ready:
+        if pipeline_error is None and final_upload_error is None:
             try:
+                prune_obsolete_cache(client, stats, package_paths)
                 client.upload_metadata(LOCK_DIGEST_KEY, lock_digest + "\n")
+                stats.generation = "current"
                 log(f"✓ Published cache generation {lock_digest[:12]}")
             except Exception as exception:  # noqa: BLE001 - report metadata upload failures.
                 final_upload_error = exception
-        elif pipeline_error is None and final_upload_error is None:
-            warning("Cache build succeeded, but its generation remains uncommitted")
         if pipeline_error is not None and final_upload_error is not None:
             warning(f"Final cache upload also failed: {final_upload_error}")
         stats.write_summary()

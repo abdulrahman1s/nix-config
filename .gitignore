@@ -3,6 +3,7 @@ result
 result-*
 .direnv/
 .wrangler/
+node_modules/
 
 # Local credentials and environment
 .env
