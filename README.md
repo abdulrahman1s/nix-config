@@ -137,11 +137,13 @@ GitHub Actions to the private Cloudflare R2 bucket
 are declared in both [`flake.nix`](flake.nix) and
 [`configuration.nix`](configuration.nix).
 After the complete NixOS build and final upload succeed, the workflow compares
-cached objects with the current system closure and prunes obsolete narinfo and
-NAR objects. This runs daily and after upgrades, including package updates that
-do not change `flake.lock`. Evaluation-time sources are retained so the system
-can still be evaluated from the cache. The lock digest is recorded only after
-pruning succeeds.
+cached objects with the current system and build-time dependency closures, then
+prunes obsolete narinfo and NAR objects. This runs daily and after upgrades,
+including package updates that do not change `flake.lock`. Fixed-output inputs
+such as source archives and firmware are uploaded and retained while the current
+build needs them. Evaluation-time sources are retained so the system can still
+be evaluated from the cache. The lock digest is recorded only after pruning
+succeeds.
 Outputs available from other configured caches are substituted and are not
 uploaded to R2. CI also enables `always-allow-substitutes` so generated NixOS
 outputs can be reused instead of rebuilt on every run. Each direct package

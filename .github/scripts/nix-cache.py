@@ -392,23 +392,9 @@ def snapshot_built_records() -> list[tuple[str, str]]:
 
 
 def selected_built_paths() -> list[str]:
-    records = snapshot_built_records()
-    if not records:
-        return []
-    drvs = sorted({drv for drv, _ in records})
-    derivations = json.loads(run(["nix", "derivation", "show", *drvs]).stdout)[
-        "derivations"
-    ]
-    required_for_evaluation = read_lines(EVALUATION_PATHS)
-    paths = set()
-    for drv, path in records:
-        derivation = derivations.get(Path(drv).name, derivations.get(drv))
-        if derivation is None:
-            raise RuntimeError(f"nix derivation show omitted {drv}")
-        if path in required_for_evaluation or all(
-            "hash" not in output for output in derivation["outputs"].values()
-        ):
-            paths.add(path)
+    # Fixed-output downloads are build inputs too. If omitted, a fresh runner
+    # fetches them again, even when all downstream outputs were cached.
+    paths = {path for _, path in snapshot_built_records()}
     return sorted(paths - read_lines(UPLOADED_PATHS))
 
 
@@ -791,6 +777,38 @@ def nar_for_narinfo(client: CacheClient, key: str) -> str:
     return urls[0]
 
 
+def current_build_paths() -> set[str]:
+    drv = run(
+        [
+            "nix",
+            "eval",
+            "--raw",
+            ".#nixosConfigurations.default.config.system.build.toplevel.drvPath",
+            "--no-update-lock-file",
+        ]
+    ).stdout.strip()
+    requisites = set(
+        run(["nix-store", "--query", "--requisites", drv]).stdout.splitlines()
+    )
+    derivations = sorted(path for path in requisites if path.endswith(".drv"))
+    # The derivation closure contains source paths, but not the outputs of
+    # build-time dependencies. Keep those outputs so a future runner can
+    # substitute them if an otherwise cached downstream path changes.
+    paths = requisites - set(derivations)
+    for start in range(0, len(derivations), 200):
+        paths.update(
+            run(
+                [
+                    "nix-store",
+                    "--query",
+                    "--outputs",
+                    *derivations[start : start + 200],
+                ]
+            ).stdout.splitlines()
+        )
+    return paths
+
+
 def prune_obsolete_cache(
     client: CacheClient, stats: Stats, package_paths: set[str]
 ) -> None:
@@ -819,10 +837,12 @@ def prune_obsolete_cache(
         else:
             raise RuntimeError(f"evaluation path manifest returned HTTP {status}")
         evaluation = previous_evaluation | read_lines(EVALUATION_PATHS)
+        build_paths = current_build_paths()
         live_hashes = {
-            store_hash(path) for path in closure | evaluation | package_paths
+            store_hash(path)
+            for path in closure | build_paths | evaluation | package_paths
         }
-        log(f"• Preserving {len(live_hashes)} live store paths")
+        log(f"• Preserving {len(live_hashes)} current runtime and build-time paths")
 
         objects = list_cache_objects(client)
         narinfos = {
