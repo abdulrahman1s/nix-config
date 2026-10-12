@@ -1,8 +1,12 @@
-name: Build NixOS cache
+name: Refresh NixOS cache
+
+run-name: Nix cache · ${{ github.event_name }} · ${{ github.ref_name }}
 
 on:
   push:
     branches: [master]
+  schedule:
+    - cron: '17 5 * * *'
   workflow_dispatch:
     inputs:
       retry_failed:
@@ -26,15 +30,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: nixos-cache-${{ github.ref }}
+  group: nixos-cache
   cancel-in-progress: false
 
 jobs:
   build:
+    name: Build and publish cache
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
       - name: Configure private cache access
@@ -45,23 +50,13 @@ jobs:
           umask 077
           printf 'machine abdulrahman1s-nix-cache.citizen6775.workers.dev\nlogin nix\npassword %s\n' \
             "$NIX_CACHE_READ_TOKEN" > "$HOME/.netrc"
-      - name: Check private cache availability
-        run: |
-          status=$(curl --netrc-file "$HOME/.netrc" --silent --show-error \
-            --retry 3 --connect-timeout 10 --max-time 30 \
-            --output /dev/null --write-out '%{http_code}' \
-            https://abdulrahman1s-nix-cache.citizen6775.workers.dev/nix-cache-info)
-          case "$status" in
-            200|404) ;;
-            *) echo "Private cache returned HTTP $status" >&2; exit 1 ;;
-          esac
       # Build inputs can still be large, especially the kernel toolchain.
       - uses: jlumbroso/free-disk-space@v2.0.0
         with:
           swap-storage: false
           preinstalled-runtimes: false
       - name: Prepare post-build hook
-        run: install -m 0555 .github/scripts/record-nix-build.sh /tmp/record-nix-build
+        run: install -m 0555 .github/scripts/nix-cache.py /tmp/record-nix-build
       - uses: cachix/install-nix-action@v31
         with:
           install_options: --no-daemon
@@ -71,35 +66,10 @@ jobs:
             cores = 2
             post-build-hook = /tmp/record-nix-build
             netrc-file = /home/runner/.netrc
-      - name: Build packages missing from substituters
-        id: build
+      - name: Build and publish cache
         env:
           RETRY_FAILED: ${{ inputs.retry_failed }}
           NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
           NIX_CACHE_WRITE_TOKEN: ${{ secrets.NIX_CACHE_WRITE_TOKEN }}
           NIX_CACHE_URL: https://abdulrahman1s-nix-cache.citizen6775.workers.dev
-        run: |
-          sh .github/scripts/upload-built-paths-loop.sh &
-          uploader_pid=$!
-          trap 'touch /tmp/nix-cache-stop-uploader; wait "$uploader_pid"' EXIT
-          bash .github/scripts/build-cache-targets.sh
-      - name: Build NixOS system for local substitution
-        id: system
-        env:
-          NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
-          NIX_CACHE_WRITE_TOKEN: ${{ secrets.NIX_CACHE_WRITE_TOKEN }}
-          NIX_CACHE_URL: https://abdulrahman1s-nix-cache.citizen6775.workers.dev
-        run: |
-          rm -f /tmp/nix-cache-stop-uploader
-          sh .github/scripts/upload-built-paths-loop.sh &
-          uploader_pid=$!
-          trap 'touch /tmp/nix-cache-stop-uploader; wait "$uploader_pid"' EXIT
-          nix build .#nixosConfigurations.default.config.system.build.toplevel \
-            --no-link --no-update-lock-file
-      - name: Publish built paths to private R2
-        if: ${{ always() && (steps.build.outcome != 'skipped' || steps.system.outcome != 'skipped') }}
-        env:
-          NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
-          NIX_CACHE_WRITE_TOKEN: ${{ secrets.NIX_CACHE_WRITE_TOKEN }}
-          NIX_CACHE_URL: https://abdulrahman1s-nix-cache.citizen6775.workers.dev
-        run: sh .github/scripts/publish-nix-cache.sh
+        run: python3 .github/scripts/nix-cache.py

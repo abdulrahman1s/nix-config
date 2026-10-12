@@ -4,7 +4,12 @@ const nar = /^nar\/[0-9a-z]+\.nar\.zst$/;
 const ciMetadata = /^ci\/[a-z0-9-]+$/;
 
 function validKey(key) {
-  return key === "nix-cache-info" || narinfo.test(key) || nar.test(key) || ciMetadata.test(key);
+  return (
+    key === "nix-cache-info" ||
+    narinfo.test(key) ||
+    nar.test(key) ||
+    ciMetadata.test(key)
+  );
 }
 
 function unauthorized() {
@@ -18,8 +23,39 @@ function forbidden() {
   return new Response("Forbidden", { status: 403 });
 }
 
+function canWrite(request, env) {
+  return (
+    env.WRITE_TOKEN &&
+    request.headers.get("Authorization") === `Bearer ${env.WRITE_TOKEN}`
+  );
+}
+
+async function purgeCache(request, env) {
+  if (!canWrite(request, env)) {
+    return forbidden();
+  }
+  if (request.method !== "DELETE") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  // Keep generation markers so failed replacement builds can resume safely.
+  const keep = new Set([
+    "nix-cache-info",
+    "ci/flake-lock-hash",
+    "ci/pending-flake-lock-hash",
+  ]);
+  const objects = await env.CACHE.list({ limit: 1000 });
+  const keys = objects.objects
+    .map((object) => object.key)
+    .filter((key) => !keep.has(key));
+  if (keys.length > 0) {
+    await env.CACHE.delete(keys);
+  }
+  return Response.json({ deleted: keys.length });
+}
+
 async function upload(request, env, key, url) {
-  if (!env.WRITE_TOKEN || request.headers.get("Authorization") !== `Bearer ${env.WRITE_TOKEN}`) {
+  if (!canWrite(request, env)) {
     return forbidden();
   }
 
@@ -65,6 +101,9 @@ async function upload(request, env, key, url) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/admin/purge-cache") {
+      return purgeCache(request, env);
+    }
     const isUpload = url.pathname.startsWith("/upload/");
     const key = decodeURIComponent(url.pathname.slice(isUpload ? 8 : 1));
     if (!validKey(key)) {
@@ -76,10 +115,17 @@ export default {
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new Response("Method not allowed", { status: 405 });
     }
-    if (!env.READ_TOKEN || request.headers.get("Authorization") !== `Basic ${btoa(`nix:${env.READ_TOKEN}`)}`) {
+    if (
+      !env.READ_TOKEN ||
+      request.headers.get("Authorization") !==
+        `Basic ${btoa(`nix:${env.READ_TOKEN}`)}`
+    ) {
       return unauthorized();
     }
-    const object = request.method === "HEAD" ? await env.CACHE.head(key) : await env.CACHE.get(key);
+    const object =
+      request.method === "HEAD"
+        ? await env.CACHE.head(key)
+        : await env.CACHE.get(key);
     if (!object) {
       return new Response("Not found", { status: 404 });
     }
@@ -89,6 +135,9 @@ export default {
       "Cache-Control": "private, no-store",
       ETag: object.httpEtag,
     });
-    return new Response(request.method === "HEAD" ? null : object.body, { status: 200, headers });
+    return new Response(request.method === "HEAD" ? null : object.body, {
+      status: 200,
+      headers,
+    });
   },
 };
