@@ -172,6 +172,7 @@ in
           mode = "0700";
         }
         ".local/state/ghostty"
+        ".local/state/vicinae" # onboarding completion and telemetry state
         ".local/state/wireplumber" # selected audio devices, routes, and stream settings
         ".slim" # services/slim.nix ReadWritePaths
         ".npm-global"

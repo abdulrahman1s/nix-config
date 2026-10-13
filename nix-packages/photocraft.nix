@@ -1,5 +1,6 @@
 { lib, stdenv, fetchurl, autoPatchelfHook, makeWrapper, photocraft
-, libGL, libxkbcommon, wayland, libx11, libxcb, vulkan-loader
+, libGL, libxkbcommon, wayland, libx11, libxcb, libxcursor, libxi, libxrandr
+, vulkan-loader
 }:
 
 stdenv.mkDerivation rec {
@@ -12,7 +13,10 @@ stdenv.mkDerivation rec {
   };
 
   nativeBuildInputs = [ autoPatchelfHook makeWrapper ];
-  buildInputs = [ libGL libxkbcommon wayland libx11 libxcb vulkan-loader stdenv.cc.cc.lib ];
+  buildInputs = [
+    libGL libxkbcommon wayland libx11 libxcb libxcursor libxi libxrandr
+    vulkan-loader stdenv.cc.cc.lib
+  ];
   dontBuild = true;
   dontStrip = true;
 
