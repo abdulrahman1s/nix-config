@@ -42,8 +42,7 @@ in
     };
   });
 
-  noctalia = inputs.noctalia.packages.${system}.default.overrideAttrs (old: {
-    patches = (old.patches or [ ]) ++ [ ./noctalia-bar-hide-delay.patch ];
-  });
+  # Bar hide delay is implemented upstream as of 5.3.0.
+  noctalia = inputs.noctalia.packages.${system}.default;
   niri = pkgs.niri;
 }

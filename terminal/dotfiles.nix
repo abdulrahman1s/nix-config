@@ -6,6 +6,7 @@ let
   repoRoot = "/home/${username}/system-conf";
   repoConfigRoot = "${repoRoot}/config";
   rtkSkill = "${repoRoot}/.agents/skills/rtk/SKILL.md";
+  intellipawn = pkgs.callPackage ../local-packages/intellipawn.nix { };
 
   relativeConfigPath = path:
     lib.removePrefix "${toString configRoot}/" (toString path);
@@ -77,6 +78,8 @@ in
         source = "${repoConfigRoot}/zed/settings.json";
         clobber = true;
       };
+      # Keep Pawn Forge's grammar, but use a server that resolves variables.
+      "zed/intellipawn".source = "${intellipawn}";
     };
   };
 }

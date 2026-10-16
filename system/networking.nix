@@ -99,6 +99,7 @@
 
     firewall = {
       enable = true;
+      allowedUDPPorts = [ 7777 ];
       interfaces.${lanInterface}.allowedTCPPorts = [ 8901 ];
     };
   };

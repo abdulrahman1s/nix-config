@@ -192,6 +192,18 @@ in
         ".config/Signal"
         ".config/photocraft" # PhotoCraft settings
         ".config/filmcraft" # FilmCraft settings
+        {
+          directory = ".config/com.abdurrahim.DigUp"; # selected folders and search settings
+          mode = "0700";
+        }
+        {
+          directory = ".local/share/digup"; # search indexes and downloaded embedding model
+          mode = "0700";
+        }
+        {
+          directory = ".local/share/com.abdurrahim.DigUp"; # Tauri webview state
+          mode = "0700";
+        }
         ".config/Code"
         ".config/opencode" # config, plugins, and global agent instructions
         ".local/share/opencode" # credentials, session database, logs, and snapshots

@@ -16,6 +16,7 @@ let
   wireview = call ./wireview-linux.nix;
   photocraft = call ./photocraft.nix;
   filmcraft = call ./filmcraft.nix;
+  digup = call ./digup.nix;
 in
 {
   imports = [ browser.module ];
@@ -60,6 +61,7 @@ in
     wireview.sandbox
     photocraft
     filmcraft
+    digup
   ] ++ browser.packages;
 
   services.udev.packages = [ wireview.package ];

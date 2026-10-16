@@ -25,12 +25,29 @@
     "provider": "none"
   },
   "show_edit_predictions": false,
+  "file_types": {
+    "Pawn": ["inc", "pwn"]
+  },
   "languages": {
+    "Pawn": {
+      "language_servers": ["pawn-language-server"],
+      "format_on_save": "off"
+    },
     "Nix": {
       "language_servers": ["nixd", "!nil"]
     }
   },
   "lsp": {
+    "pawn-language-server": {
+      "binary": {
+        "ignore_system_version": false,
+        "path": "/home/abdulrahman/.config/zed/intellipawn/bin/pawn-lsp",
+        "arguments": []
+      },
+      "initialization_options": {
+        "semanticHighlighting": true
+      }
+    },
     "nixd": {
       "settings": {
         "nixpkgs": {
