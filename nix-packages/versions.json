@@ -8,12 +8,12 @@
     "hash": "sha256-PKWef5pmQbni+5rWgGg3hLWrgCb/dBj7ISoOvl3zodc="
   },
   "photocraft": {
-    "version": "0.9.0",
-    "hash": "sha256-kTAMFIWtcQg5YEsIVTHJDnesfr2yowJZMJrXSvz9uQ0="
+    "version": "0.10.0",
+    "hash": "sha256-xdRVeF2cLq9pW/jmMnxNbSOjnduVamEU8MW2Qyb5hOE="
   },
   "filmcraft": {
-    "version": "0.8.0",
-    "hash": "sha256-sWaHeQWuihtVBQZtbd5g184Fgxz7MJus1deXD0uwF+E="
+    "version": "0.9.0",
+    "hash": "sha256-6meVPMdUv9gnLg5fqUBRjhYGiulva3Ki3OVm7WmmFjI="
   },
   "sklauncher": {
     "version": "4.0.54",
