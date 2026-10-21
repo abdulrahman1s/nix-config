@@ -135,6 +135,7 @@ in
         ".cargo"
         ".rustup"
         ".codex"
+        ".symposium" # agent configuration, plugin sources and sync state
         {
           directory = ".config/ChatGPT"; # desktop app sign-in and project state
           mode = "0700";
@@ -192,6 +193,14 @@ in
         ".config/Signal"
         ".config/photocraft" # PhotoCraft settings
         ".config/filmcraft" # FilmCraft settings
+        {
+          directory = ".config/app.mangodisk.desktop"; # MangoDisk preferences and exclusions
+          mode = "0700";
+        }
+        {
+          directory = ".local/share/app.mangodisk.desktop"; # MangoDisk history and webview state
+          mode = "0700";
+        }
         {
           directory = ".config/com.abdurrahim.DigUp"; # selected folders and search settings
           mode = "0700";

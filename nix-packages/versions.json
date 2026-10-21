@@ -19,6 +19,10 @@
     "version": "4.0.54",
     "hash": "sha256-b3rlIg9vHs/jEM430gtnqTVyCbEmVczydy7xJDobjEg="
   },
+  "mangodisk": {
+    "version": "1.1.9",
+    "hash": "sha256-XkPcVr4ADql2+CKQK7Z7Qxhm+rhT8OWf8Yt+DvVW8ww="
+  },
   "claude": {
     "version": "2.1.306",
     "sha256": "e5a0284d14ae555ef208c6d2987e29f298cb3bb69a7497c9f24217980233acd3"

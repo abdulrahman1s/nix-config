@@ -645,7 +645,7 @@ def target_name(target: str) -> str:
     return name.split("-", 1)[1].removesuffix(".drv") if "-" in name else name
 
 
-def build_one(target: str, kernel_drv: str) -> tuple[str, int, str]:
+def build_one(target: str, kernel_drv: str) -> tuple[str, int]:
     limit = "120m" if target.split("^", 1)[0] == kernel_drv else "45m"
     log(f"• Building {target_name(target)} (timeout {limit})")
     result = subprocess.run(
@@ -658,6 +658,7 @@ def build_one(target: str, kernel_drv: str) -> tuple[str, int, str]:
             "build",
             "--no-link",
             "--no-update-lock-file",
+            "--print-build-logs",
             "--option",
             "max-jobs",
             "1",
@@ -669,11 +670,8 @@ def build_one(target: str, kernel_drv: str) -> tuple[str, int, str]:
             target,
         ],
         check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
     )
-    return target, result.returncode, result.stdout
+    return target, result.returncode
 
 
 def build_packages(targets: list[str], kernel_drv: str, stats: Stats) -> None:
@@ -688,7 +686,7 @@ def build_packages(targets: list[str], kernel_drv: str, stats: Stats) -> None:
         }
         completed = 0
         for future in as_completed(futures):
-            target, status, output = future.result()
+            target, status = future.result()
             completed += 1
             name = target_name(target)
             if status == 0:
@@ -699,8 +697,6 @@ def build_packages(targets: list[str], kernel_drv: str, stats: Stats) -> None:
             warning(
                 f"[{completed}/{len(targets)}] {name} failed with exit code {status}"
             )
-            with group(f"Failed build log · {name}"):
-                log(output.rstrip() or "(no build output)")
     write_lines(NEXT_FAILURES, failures)
     stats.failed = len(failures)
 
@@ -714,6 +710,10 @@ def build_system(stats: Stats) -> bool:
             ".#nixosConfigurations.default.config.system.build.toplevel",
             "--no-link",
             "--no-update-lock-file",
+            "--print-build-logs",
+            # Dependencies outside the package list must also have a build limit.
+            "--timeout",
+            "7200",
             "--log-format",
             "raw",
         ],
@@ -917,6 +917,13 @@ def run_pipeline() -> None:
         uploader.start()
         build_packages(targets, kernel_drv, stats)
         failure_state_ready = True
+        # Otherwise the system build retries failed/skipped packages, bypassing
+        # their time limits and the persisted failure list.
+        if stats.failed:
+            raise RuntimeError(
+                f"{stats.failed} package derivations failed or remain skipped; "
+                "retry unchanged failures with the retry_failed workflow input"
+            )
         if not build_system(stats):
             raise RuntimeError("complete NixOS system build failed")
     except Exception as exception:  # noqa: BLE001 - final upload must run on any failure.

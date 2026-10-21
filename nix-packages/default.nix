@@ -24,6 +24,10 @@ in
     inherit (versions) sklauncher;
   };
 
+  mangodisk = pkgs.callPackage ./mangodisk.nix {
+    inherit (versions) mangodisk;
+  };
+
   claude-code = pkgs.claude-code.override {
     manifest = {
       version = versions.claude.version;

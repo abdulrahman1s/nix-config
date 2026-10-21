@@ -51,6 +51,15 @@ in
   hjem.users.${username} = {
     clobberFiles = false;
     files = {
+      # Hooks run outside interactive shells. Symposium also invokes Cargo,
+      # whose rustup-managed binaries are deliberately installed in ~/.cargo.
+      ".local/bin/cargo-agents" = {
+        source = pkgs.writeShellScript "cargo-agents" ''
+          export PATH="/home/${username}/.cargo/bin:$PATH"
+          exec "/home/${username}/.cargo/bin/cargo-agents" "$@"
+        '';
+        clobber = true;
+      };
       ".codex/AGENTS.md" = {
         source = rtkSkill;
         clobber = true;

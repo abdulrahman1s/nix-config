@@ -35,8 +35,9 @@ current task is sufficient:
   `git rebase -i`, and other history rewrites.
 
 The user's `rebuild` alias expands to
-`sudo nixos-rebuild switch --flake /home/abdulrahman/system-conf#default`.
-Treat it as activation, never as a build shortcut.
+`nixos-rebuild switch --sudo --flake /home/abdulrahman/system-conf#default`.
+It evaluates and builds as the user, then elevates for activation. Treat it as
+activation, never as a build shortcut.
 
 ## Start each task
 

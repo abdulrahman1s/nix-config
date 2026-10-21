@@ -101,6 +101,19 @@ if [[ $sklauncher_version != "$(jq -er '.sklauncher.version' <<< "$versions")" ]
     '.sklauncher = {version: $version, hash: $hash}' <<< "$versions")
 fi
 
+mangodisk_release=$(release harry0703/MangoDisk)
+mangodisk_version=$(jq -er '.tag_name | sub("^v"; "")' <<< "$mangodisk_release")
+if [[ $mangodisk_version != "$(jq -er '.mangodisk.version' <<< "$versions")" ]]; then
+  mangodisk_asset="MangoDisk-${mangodisk_version}-linux-x64.deb"
+  asset_url "$mangodisk_release" "$mangodisk_asset" >/dev/null
+  mangodisk_digest=$(jq -er --arg name "$mangodisk_asset" \
+    '.assets[] | select(.name == $name) | .digest | capture("^sha256:(?<hash>[0-9a-f]{64})$").hash' \
+    <<< "$mangodisk_release")
+  mangodisk_hash=$(nix hash convert --hash-algo sha256 --to sri "$mangodisk_digest")
+  versions=$(jq --arg version "$mangodisk_version" --arg hash "$mangodisk_hash" \
+    '.mangodisk = {version: $version, hash: $hash}' <<< "$versions")
+fi
+
 claude_release=$(release anthropics/claude-code)
 claude_version=$(jq -er '.tag_name | sub("^v"; "")' <<< "$claude_release")
 if [[ $claude_version != "$(jq -er '.claude.version' <<< "$versions")" ]]; then

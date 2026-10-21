@@ -68,6 +68,9 @@ in
       scrcpy
 
       # Tools
+      # Disk analysis and cleanup need the real filesystem across user-selected
+      # locations; a fixed NixPak allowlist would hide scan targets and caches.
+      inputs.self.packages.${pkgs.system}.mangodisk
       ethtool
       just
       nh
@@ -78,12 +81,14 @@ in
 
   users.groups.plugdev = { };
 
-  # ── Default image viewer (loupe) ──────────────────────────
+  # ── Desktop associations ──────────────────────────────────
   xdg.mime.defaultApplications =
     let
       loupe = "org.gnome.Loupe.desktop";
     in
     {
+      # OAuth and desktop deep links return to the native ChatGPT app.
+      "x-scheme-handler/codex" = "chatgpt.desktop";
       "image/jpeg" = loupe;
       "image/png" = loupe;
       "image/gif" = loupe;

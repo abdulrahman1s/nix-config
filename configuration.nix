@@ -49,21 +49,20 @@
       "https://nixos-cache-proxy.cofob.dev"
       "https://cache.nixos.org" # fallback when the Cloudflare proxy is unavailable
       "https://cache.nixos-cuda.org"
-      "https://attic.xuyh0120.win/lantian"
       "https://noctalia.cachix.org"
       "https://abdulrahman1s-nix-cache.citizen6775.workers.dev"
     ];
     trusted-public-keys = [
       "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
-      "lantian:EeAUQ+W+6r7EtwnmYjeVwx5kOGEBpjlBfPlzGlTNvHc="
       "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
       "abdulrahman1s-r2-cache-2:0FLUhIO7qwnRhMc2pzOp8lC8AFO67a7JKbzZugSpo8M="
     ];
     netrc-file = "/home/${username}/.aws/nix-cache.netrc";
     # CI can publish a path moments after a local cache miss; check again immediately.
     narinfo-cache-negative-ttl = 0;
-    # Build on GitHub Actions; fail locally if an output is absent from every cache.
-    max-jobs = 0;
+    # Give each package all CPU cores without running competing package builds.
+    max-jobs = 1;
+    cores = 0;
     # NixOS uses preferLocalBuild for small generated files, but CI publishes them too.
     always-allow-substitutes = true;
     http-connections = 50;

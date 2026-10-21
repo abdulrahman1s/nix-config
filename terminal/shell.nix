@@ -151,9 +151,11 @@ in
 
       # NixOS management
       os = "just --justfile ${home}/system-conf/config/justfile";
-      rebuild = "sudo nixos-rebuild switch --flake '${home}/system-conf#default'";
+      # Keep evaluation/builds on the user's daemon connection; root's local
+      # store path can crash in the automatic GC runtime-root scan.
+      rebuild = "nixos-rebuild switch --sudo --flake '${home}/system-conf#default'";
       flake-update = "nix flake update";
-      flake-switch = "sudo nixos-rebuild switch --flake '${home}/system-conf#default'";
+      flake-switch = "nixos-rebuild switch --sudo --flake '${home}/system-conf#default'";
       nixos-cleanup = "sudo nix-collect-garbage -d && sudo nix-store --gc";
 
 
