@@ -47,6 +47,15 @@ let
 
 in
 {
+  # Assemble modules with the same nixpkgs that builds the pinned kernel.
+  # Newer assemblers require modules.cer, which this kernel does not produce.
+  nixpkgs.overlays = [
+    (_final: _prev: {
+      aggregateModules =
+        inputs.nix-cachyos-kernel.inputs.nixpkgs.legacyPackages.${pkgs.stdenv.hostPlatform.system}.aggregateModules;
+    })
+  ];
+
   # ── Nix Store ────────────────────────────────────────────
   nix = {
     # Hard-link identical store paths on a timer (avoids per-install slowdown).
