@@ -4,24 +4,24 @@
     "hash": "sha256-WCZGxr8FYesN5UD3/IW5EhsAkagmvG6Wgwt/FyISIYI="
   },
   "chatgpt": {
-    "version": "26.1013.40934",
-    "hash": "sha256-PKWef5pmQbni+5rWgGg3hLWrgCb/dBj7ISoOvl3zodc="
+    "version": "26.1016.51333",
+    "hash": "sha256-x59/0k/X2LZDmUKpcwbFYT2OBJkD2JPxNqBb/tVR3Io="
   },
   "photocraft": {
-    "version": "0.10.0",
-    "hash": "sha256-xdRVeF2cLq9pW/jmMnxNbSOjnduVamEU8MW2Qyb5hOE="
+    "version": "0.11.1",
+    "hash": "sha256-DhSZtJm4vYCpY44xXA8ckn0GBqxc1Yv72kNPUCXICkk="
   },
   "filmcraft": {
-    "version": "0.9.0",
-    "hash": "sha256-6meVPMdUv9gnLg5fqUBRjhYGiulva3Ki3OVm7WmmFjI="
+    "version": "0.10.0",
+    "hash": "sha256-ldehr8ueICHTNxoBFwCvbOL/4a8OHP6ZxvuYs6oyD4A="
   },
   "sklauncher": {
     "version": "4.0.54",
     "hash": "sha256-b3rlIg9vHs/jEM430gtnqTVyCbEmVczydy7xJDobjEg="
   },
   "claude": {
-    "version": "2.1.304",
-    "sha256": "0f3468fa285f112650feb3bec2913425b7ba5c83cd4eb411b5c75b4086416bb6"
+    "version": "2.1.306",
+    "sha256": "e5a0284d14ae555ef208c6d2987e29f298cb3bb69a7497c9f24217980233acd3"
   },
   "brave-origin": {
     "version": "1.97.59",
