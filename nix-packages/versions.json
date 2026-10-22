@@ -4,28 +4,28 @@
     "hash": "sha256-WCZGxr8FYesN5UD3/IW5EhsAkagmvG6Wgwt/FyISIYI="
   },
   "chatgpt": {
-    "version": "26.1016.51333",
-    "hash": "sha256-x59/0k/X2LZDmUKpcwbFYT2OBJkD2JPxNqBb/tVR3Io="
+    "version": "26.1016.61520",
+    "hash": "sha256-mt1iKRbF+jhhr9lQga934lSIwQjKnFQ+H2dWCzkNKNQ="
   },
   "photocraft": {
-    "version": "0.11.1",
-    "hash": "sha256-DhSZtJm4vYCpY44xXA8ckn0GBqxc1Yv72kNPUCXICkk="
+    "version": "0.12.0",
+    "hash": "sha256-+yuDAjDjICoe4Y7CDj9tJQ0naxZdeIEeg+tqdXJfnOI="
   },
   "filmcraft": {
     "version": "0.10.0",
     "hash": "sha256-ldehr8ueICHTNxoBFwCvbOL/4a8OHP6ZxvuYs6oyD4A="
   },
   "sklauncher": {
-    "version": "4.0.54",
-    "hash": "sha256-b3rlIg9vHs/jEM430gtnqTVyCbEmVczydy7xJDobjEg="
+    "version": "4.0.55",
+    "hash": "sha256-M/j5BgnQ8TZaF+eLfZyEUm+1yhAG/dtOlDf2+8+P7jc="
   },
   "mangodisk": {
-    "version": "1.1.9",
-    "hash": "sha256-XkPcVr4ADql2+CKQK7Z7Qxhm+rhT8OWf8Yt+DvVW8ww="
+    "version": "1.2.0",
+    "hash": "sha256-vzofE6ZefaKm7zRCjmj9kNDtOoL5qv/vI5ILvQAGYCg="
   },
   "claude": {
-    "version": "2.1.306",
-    "sha256": "e5a0284d14ae555ef208c6d2987e29f298cb3bb69a7497c9f24217980233acd3"
+    "version": "2.1.308",
+    "sha256": "f8b3641a8d3664420bde0153433e03fd3fad5351a1a12cf6f798ed86c52c9ea9"
   },
   "brave-origin": {
     "version": "1.97.59",
