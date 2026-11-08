@@ -24,6 +24,7 @@ UPLOADED_PATHS = Path("/tmp/nix-cache-uploaded-paths")
 NEXT_FAILURES = Path("/tmp/nix-cache-failed-targets-next")
 LOCK_DIGEST_KEY = "ci/flake-lock-hash"
 EVALUATION_MANIFEST_KEY = "ci/evaluation-paths"
+PRUNED_SYSTEM_KEY = "ci/pruned-system-drv"
 PART_SIZE = 8 * 1024 * 1024
 SINGLE_UPLOAD_LIMIT = 50 * 1024 * 1024
 STORE_HASH = re.compile(r"^[0-9a-df-np-sv-z]{32}$")
@@ -543,57 +544,45 @@ class IncrementalUploader:
 
 def evaluate_targets(
     client: CacheClient, stats: Stats
-) -> tuple[list[str], str, set[str]]:
+) -> tuple[list[str], str, set[str], str, bool]:
     with group("Evaluate cache targets"):
         BUILT_PATHS.write_text("")
         EVALUATION_PATHS.write_text("")
         UPLOADED_PATHS.write_text("")
         NEXT_FAILURES.write_text("")
 
-        subprocess.run(
-            [
-                "nix",
-                "eval",
-                "--raw",
-                ".#nixosConfigurations.default.config.system.build.toplevel.drvPath",
-                "--no-update-lock-file",
-            ],
-            check=True,
-            stdout=subprocess.DEVNULL,
-        )
-        write_lines(EVALUATION_PATHS, {path for _, path in snapshot_built_records()})
-
-        package_expression = (
-            'n: builtins.map (p: { target = "${p.drvPath}^${p.outputName}"; path = p.outPath; }) '
+        # Each separate `nix eval` re-evaluates the whole NixOS module system.
+        expression = (
+            "n: { system = n.config.system.build.toplevel.drvPath; "
+            "kernel = n.config.boot.kernelPackages.kernel.drvPath; "
+            'packages = builtins.map (p: { target = "${p.drvPath}^${p.outputName}"; path = p.outPath; }) '
             "(n.config.environment.systemPackages ++ "
             "builtins.concatMap (u: u.packages) (builtins.attrValues n.config.users.users) ++ "
             "n.config.services.udev.packages ++ n.config.boot.extraModulePackages ++ "
-            "[ n.config.boot.kernelPackages.kernel ])"
+            "[ n.config.boot.kernelPackages.kernel ]); }"
         )
-        packages = json.loads(
-            run(
+        evaluation = json.loads(
+            subprocess.run(
                 [
                     "nix",
                     "eval",
                     "--json",
                     ".#nixosConfigurations.default",
                     "--apply",
-                    package_expression,
+                    expression,
                     "--no-update-lock-file",
-                ]
+                ],
+                check=True,
+                stdout=subprocess.PIPE,
+                text=True,
             ).stdout
         )
+        write_lines(EVALUATION_PATHS, {path for _, path in snapshot_built_records()})
+        packages = evaluation["packages"]
         candidates = sorted({package["target"] for package in packages})
         package_paths = {package["path"] for package in packages}
-        kernel_drv = run(
-            [
-                "nix",
-                "eval",
-                "--raw",
-                ".#nixosConfigurations.default.config.boot.kernelPackages.kernel.drvPath",
-                "--no-update-lock-file",
-            ]
-        ).stdout.strip()
+        kernel_drv = evaluation["kernel"]
+        system_drv = evaluation["system"]
 
         plan = subprocess.run(
             [
@@ -603,6 +592,7 @@ def evaluate_targets(
                 "--no-link",
                 "--no-update-lock-file",
                 *candidates,
+                f"{system_drv}^out",
             ],
             check=False,
             text=True,
@@ -619,6 +609,9 @@ def evaluate_targets(
         needed = [
             target for target in candidates if target.split("^", 1)[0] in planned_drvs
         ]
+        # A substitutable toplevel implies its whole closure is substitutable,
+        # so realizing it would only download every runtime path.
+        system_cached = system_drv not in planned_drvs
 
         status, body = client.read("ci/failed-targets")
         if status == 200:
@@ -637,7 +630,7 @@ def evaluate_targets(
         log(f"• {len(needed)} derivations missing from configured substituters")
         log(f"• {len(skipped)} unchanged failures skipped")
         log(f"• {len(targets)} derivations queued with two parallel workers")
-        return targets, kernel_drv, package_paths
+        return targets, kernel_drv, package_paths, system_drv, system_cached
 
 
 def target_name(target: str) -> str:
@@ -777,23 +770,16 @@ def nar_for_narinfo(client: CacheClient, key: str) -> str:
     return urls[0]
 
 
-def current_build_paths() -> set[str]:
-    drv = run(
-        [
-            "nix",
-            "eval",
-            "--raw",
-            ".#nixosConfigurations.default.config.system.build.toplevel.drvPath",
-            "--no-update-lock-file",
-        ]
-    ).stdout.strip()
+def current_build_paths(system_drv: str) -> set[str]:
     requisites = set(
-        run(["nix-store", "--query", "--requisites", drv]).stdout.splitlines()
+        run(["nix-store", "--query", "--requisites", system_drv]).stdout.splitlines()
     )
     derivations = sorted(path for path in requisites if path.endswith(".drv"))
     # The derivation closure contains source paths, but not the outputs of
     # build-time dependencies. Keep those outputs so a future runner can
-    # substitute them if an otherwise cached downstream path changes.
+    # substitute them if an otherwise cached downstream path changes. Every
+    # runtime path is one of these sources or outputs, so this also covers the
+    # system closure without realizing the system on this runner.
     paths = requisites - set(derivations)
     for start in range(0, len(derivations), 200):
         paths.update(
@@ -810,23 +796,23 @@ def current_build_paths() -> set[str]:
 
 
 def prune_obsolete_cache(
-    client: CacheClient, stats: Stats, package_paths: set[str]
+    client: CacheClient, stats: Stats, package_paths: set[str], system_drv: str
 ) -> None:
     with group("Prune obsolete cache objects"):
-        system_path = run(
-            [
-                "nix",
-                "eval",
-                "--raw",
-                ".#nixosConfigurations.default.config.system.build.toplevel.outPath",
-                "--no-update-lock-file",
-            ]
-        ).stdout.strip()
-        closure = set(
-            run(
-                ["nix-store", "--query", "--requisites", system_path]
-            ).stdout.splitlines()
-        )
+        # The live set derives from the system derivation and flake.lock, and
+        # only uploads add objects. If none of them changed, pruning is a no-op.
+        status, body = client.read(PRUNED_SYSTEM_KEY)
+        if status not in (200, 404):
+            raise RuntimeError(f"pruned system marker returned HTTP {status}")
+        if (
+            status == 200
+            and body.decode().strip() == system_drv
+            and stats.generation == "current"
+            and stats.uploaded == 0
+        ):
+            log("✓ System and cache contents are unchanged since the last prune")
+            return
+
         status, body = client.read(EVALUATION_MANIFEST_KEY)
         # Evaluation-time builds may be absent on a warm run, but paths from
         # an older flake.lock must not pin obsolete dependencies forever.
@@ -837,10 +823,9 @@ def prune_obsolete_cache(
         else:
             raise RuntimeError(f"evaluation path manifest returned HTTP {status}")
         evaluation = previous_evaluation | read_lines(EVALUATION_PATHS)
-        build_paths = current_build_paths()
+        build_paths = current_build_paths(system_drv)
         live_hashes = {
-            store_hash(path)
-            for path in closure | build_paths | evaluation | package_paths
+            store_hash(path) for path in build_paths | evaluation | package_paths
         }
         log(f"• Preserving {len(live_hashes)} current runtime and build-time paths")
 
@@ -884,6 +869,7 @@ def prune_obsolete_cache(
                 stats.pruned += len(batch)
                 stats.pruned_bytes += sum(objects[key] for key in batch)
 
+        client.upload_metadata(PRUNED_SYSTEM_KEY, system_drv + "\n")
         log(
             f"✓ Removed {stats.pruned} obsolete R2 objects "
             f"({readable_size(stats.pruned_bytes)})"
@@ -904,6 +890,7 @@ def run_pipeline() -> None:
     uploader = None
     failure_state_ready = False
     package_paths = set()
+    system_drv = ""
     lock_digest = ""
     pipeline_error = None
     final_upload_error = None
@@ -912,7 +899,9 @@ def run_pipeline() -> None:
         with group("Configure Nix cache inputs"):
             configure_nix()
             log("✓ Loaded substituters and trusted keys from flake.nix")
-        targets, kernel_drv, package_paths = evaluate_targets(client, stats)
+        targets, kernel_drv, package_paths, system_drv, system_cached = (
+            evaluate_targets(client, stats)
+        )
         uploader = IncrementalUploader(client, stats, publish_lock)
         uploader.start()
         build_packages(targets, kernel_drv, stats)
@@ -924,7 +913,10 @@ def run_pipeline() -> None:
                 f"{stats.failed} package derivations failed or remain skipped; "
                 "retry unchanged failures with the retry_failed workflow input"
             )
-        if not build_system(stats):
+        if system_cached:
+            stats.system = "cached"
+            log("✓ Complete NixOS system is already available from substituters")
+        elif not build_system(stats):
             raise RuntimeError("complete NixOS system build failed")
     except Exception as exception:  # noqa: BLE001 - final upload must run on any failure.
         pipeline_error = exception
@@ -943,7 +935,7 @@ def run_pipeline() -> None:
 
         if pipeline_error is None and final_upload_error is None:
             try:
-                prune_obsolete_cache(client, stats, package_paths)
+                prune_obsolete_cache(client, stats, package_paths, system_drv)
                 client.upload_metadata(LOCK_DIGEST_KEY, lock_digest + "\n")
                 stats.generation = "current"
                 log(f"✓ Published cache generation {lock_digest[:12]}")

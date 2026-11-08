@@ -50,11 +50,14 @@ jobs:
           umask 077
           printf 'machine abdulrahman1s-nix-cache.citizen6775.workers.dev\nlogin nix\npassword %s\n' \
             "$NIX_CACHE_READ_TOKEN" > "$HOME/.netrc"
-      # Build inputs can still be large, especially the kernel toolchain.
-      - uses: jlumbroso/free-disk-space@v2.0.0
-        with:
-          swap-storage: false
-          preinstalled-runtimes: false
+      # The runner starts with ~86 GiB free and the system closure is ~33 GiB.
+      # Removing the largest unused toolchains (~20 GiB) adds headroom for
+      # kernel builds. It runs in the background during evaluation; apt purges
+      # and Docker pruning took minutes for only ~7 GiB more.
+      - name: Free disk space in the background
+        run: |
+          nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            > /dev/null 2>&1 &
       - name: Prepare post-build hook
         run: install -m 0555 .github/scripts/nix-cache.py /tmp/record-nix-build
       - uses: cachix/install-nix-action@v31
