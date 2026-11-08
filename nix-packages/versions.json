@@ -1,34 +1,34 @@
 {
   "codex": {
-    "version": "0.164.0",
-    "hash": "sha256-PsVQUxCWCNUDj35QdQ99Jfdo39dA/vBxqnEOJVm2Oqw="
+    "version": "0.167.0",
+    "hash": "sha256-O7916D3mtYrtKPLPbjOtQj7DH9RwChRXuUvlV+pafG4="
   },
   "chatgpt": {
-    "version": "26.1021.22027",
-    "hash": "sha256-6wgxxzTxVPk/jrzw4X0RjaDep9wXN9xhoecURDdb8ZA="
+    "version": "26.1103.32239",
+    "hash": "sha256-GMEIgI6ixS+42/ktM2LSd0HjOCxYkb1K6QOptXgTZO8="
   },
   "photocraft": {
-    "version": "0.15.1",
-    "hash": "sha256-tiK+QDVVEwVvgVKv6JXQoFwbw8NEoCf3cqmhL6PRwiM="
+    "version": "0.21.0",
+    "hash": "sha256-MRXlbMZG2601QeObYyO4okMY/uYZTXhN320GX3tdLTc="
   },
   "filmcraft": {
-    "version": "0.12.0",
-    "hash": "sha256-3f8KLsDYnl6eZWRO1yS1t5lZYAsWAv1OpmU7WlS/iP0="
+    "version": "0.18.0",
+    "hash": "sha256-AXnwWyDbhVv9Pe+RNs5g3uWfItLcv88j5KYlbgwVOwU="
   },
   "sklauncher": {
-    "version": "4.0.55",
-    "hash": "sha256-M/j5BgnQ8TZaF+eLfZyEUm+1yhAG/dtOlDf2+8+P7jc="
+    "version": "4.0.57",
+    "hash": "sha256-/xF9dRn20DaJcxK3mumhp75pWnXUO7BldqtrVnkRQPk="
   },
   "mangodisk": {
-    "version": "1.2.0",
-    "hash": "sha256-vzofE6ZefaKm7zRCjmj9kNDtOoL5qv/vI5ILvQAGYCg="
+    "version": "1.2.3",
+    "hash": "sha256-CRX0kNYg9ZKmKXGt4iMQzbWd6BK9qiucnP89K/5nIU0="
   },
   "claude": {
-    "version": "2.1.310",
-    "sha256": "9314f28f679546a97813f2914c4fb60a190801ef782805f47bf197317cc4ffd2"
+    "version": "2.1.319",
+    "sha256": "9977d90303740415af76bc808536b34620d0b30b7f08b0813603689875372ea0"
   },
   "brave-origin": {
-    "version": "1.98.60",
-    "hash": "sha256-VKBbHBK684D7dwqyhhwh87uQJfU3VQ9tNEHxre9S5jk="
+    "version": "1.99.55",
+    "hash": "sha256-YxmkjQ/8IF+FW4wkI/cKy19jtoghTxG7W2EL0xeT/Gs="
   }
 }
