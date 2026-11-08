@@ -38,13 +38,9 @@ in
     };
   };
 
-  brave-origin = pkgs.brave-origin.overrideAttrs (_: {
-    version = versions.brave-origin.version;
-    src = pkgs.fetchurl {
-      url = "https://github.com/brave/brave-browser/releases/download/v${versions.brave-origin.version}/brave-origin_${versions.brave-origin.version}_amd64.deb";
-      hash = versions.brave-origin.hash;
-    };
-  });
+  brave-origin = pkgs.callPackage ./brave-origin.nix {
+    inherit (versions) brave-origin;
+  };
 
   # Bar hide delay is implemented upstream as of 5.3.0.
   noctalia = inputs.noctalia.packages.${system}.default;

@@ -44,7 +44,6 @@
     '';
   };
 
-  boot.initrd.systemd.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
   hardware.usb-modeswitch.enable = true;

@@ -111,8 +111,8 @@
               (_final: prev: {
                 # One upstream test fixture uses Bash conditionals under /bin/sh.
                 protontricks = prev.protontricks.overrideAttrs (old: {
-                  pytestFlagsArray = (old.pytestFlagsArray or [ ]) ++ [
-                    "--deselect=tests/test_flatpak.py::TestGetInaccessiblePaths::test_flatpak_xdg_user_dir"
+                  disabledTestPaths = (old.disabledTestPaths or [ ]) ++ [
+                    "tests/test_flatpak.py::TestGetInaccessiblePaths::test_flatpak_xdg_user_dir"
                   ];
                 });
               })
