@@ -12,7 +12,7 @@ on:
       retry_failed:
         description: Retry unchanged derivations that failed before
         type: boolean
-        default: false
+        default: true
   workflow_call:
     inputs:
       retry_failed:
@@ -42,6 +42,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
+      - name: Test cache build scheduling
+        run: python3 -B -m unittest discover -s .github/scripts -p test_nix_cache.py -v
       - name: Configure private cache access
         env:
           NIX_CACHE_READ_TOKEN: ${{ secrets.NIX_CACHE_READ_TOKEN }}

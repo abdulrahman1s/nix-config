@@ -629,7 +629,9 @@ def evaluate_targets(
         stats.attempted = len(targets)
         log(f"• {len(needed)} derivations missing from configured substituters")
         log(f"• {len(skipped)} unchanged failures skipped")
-        log(f"• {len(targets)} derivations queued with two parallel workers")
+        for target in sorted(skipped):
+            log(f"  Skipped {target_name(target)}: {target}")
+        log(f"• {len(targets)} derivations queued (kernel first, then two workers)")
         return targets, kernel_drv, package_paths, system_drv, system_cached
 
 
@@ -639,7 +641,10 @@ def target_name(target: str) -> str:
 
 
 def build_one(target: str, kernel_drv: str) -> tuple[str, int]:
-    limit = "120m" if target.split("^", 1)[0] == kernel_drv else "45m"
+    is_kernel = target.split("^", 1)[0] == kernel_drv
+    # Leave time within the six-hour job for modules and publishing. Realize
+    # dev as well as out so modules never compile the kernel on their timer.
+    limit = "270m" if is_kernel else "45m"
     log(f"• Building {target_name(target)} (timeout {limit})")
     result = subprocess.run(
         [
@@ -657,10 +662,10 @@ def build_one(target: str, kernel_drv: str) -> tuple[str, int]:
             "1",
             "--option",
             "cores",
-            "2",
+            "0" if is_kernel else "2",
             "--log-format",
             "raw",
-            target,
+            f"{kernel_drv}^*" if is_kernel else target,
         ],
         check=False,
     )
@@ -669,26 +674,55 @@ def build_one(target: str, kernel_drv: str) -> tuple[str, int]:
 
 def build_packages(targets: list[str], kernel_drv: str, stats: Stats) -> None:
     failures = read_lines(NEXT_FAILURES)
+    stats.attempted = 0
     if not targets:
         stats.failed = len(failures)
         return
-    log(f"▶ Building {len(targets)} missing package derivations")
+    total = len(targets)
+    log(f"▶ Building {total} missing package derivations")
+    kernel_targets = [
+        target for target in targets if target.split("^", 1)[0] == kernel_drv
+    ]
+    # A module build can start the kernel as a dependency, then kill it when
+    # its shorter timeout expires. Finish all kernel outputs before workers
+    # start, and do not let them retry a failed or deliberately skipped kernel.
+    if kernel_targets:
+        stats.attempted += len(kernel_targets)
+        _, status = build_one(kernel_targets[0], kernel_drv)
+        if status:
+            failures.update(kernel_targets)
+            write_lines(NEXT_FAILURES, failures)
+            stats.failed = len(failures)
+            warning(
+                f"{target_name(kernel_targets[0])} failed with exit code {status}; "
+                "remaining package builds deferred to avoid restarting the kernel"
+            )
+            return
+        stats.succeeded += len(kernel_targets)
+        log(f"✓ Kernel outputs are ready: {target_name(kernel_targets[0])}")
+        targets = [target for target in targets if target not in kernel_targets]
+    elif any(target.split("^", 1)[0] == kernel_drv for target in failures):
+        stats.failed = len(failures)
+        warning("Package builds deferred because the kernel is a remembered failure")
+        return
+
+    stats.attempted += len(targets)
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = {
             executor.submit(build_one, target, kernel_drv): target for target in targets
         }
-        completed = 0
+        completed = len(kernel_targets)
         for future in as_completed(futures):
             target, status = future.result()
             completed += 1
             name = target_name(target)
             if status == 0:
                 stats.succeeded += 1
-                log(f"✓ [{completed}/{len(targets)}] {name}")
+                log(f"✓ [{completed}/{total}] {name}")
                 continue
             failures.add(target)
             warning(
-                f"[{completed}/{len(targets)}] {name} failed with exit code {status}"
+                f"[{completed}/{total}] {name} failed with exit code {status}"
             )
     write_lines(NEXT_FAILURES, failures)
     stats.failed = len(failures)
