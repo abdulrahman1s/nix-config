@@ -1,9 +1,7 @@
-{ config, pkgs, username, ... }:
+{ config, username, ... }:
 
 let
-  wireviewHwmon = pkgs.callPackage ../local-packages/wireview-hwmon.nix {
-    kernel = config.boot.kernelPackages.kernel;
-  };
+  wireviewHwmon = config.boot.kernelPackages.callPackage ../local-packages/wireview-hwmon.nix { };
 in
 {
   boot.extraModulePackages = [ wireviewHwmon ];

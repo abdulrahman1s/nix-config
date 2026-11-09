@@ -1,4 +1,4 @@
-{ lib, stdenv, fetchFromGitHub, kernel }:
+{ lib, stdenv, fetchFromGitHub, kernel, kernelModuleMakeFlags }:
 
 stdenv.mkDerivation rec {
   pname = "wireview-hwmon";
@@ -16,13 +16,21 @@ stdenv.mkDerivation rec {
 
   buildPhase = ''
     runHook preBuild
-    make KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build all
+    make ${lib.escapeShellArgs kernelModuleMakeFlags} \
+      KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build module
+    # Userspace binaries need the wrapped compiler's libc and linker setup.
+    make wireviewd wireviewctl
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
-    install -Dm644 wireview_hwmon.ko "$out/lib/modules/${kernel.modDirVersion}/extra/wireview_hwmon.ko"
+    # Kbuild installs the module with the kernel's signing and compression rules,
+    # including the certificate needed when assembling the system's modules.
+    make ${lib.escapeShellArgs kernelModuleMakeFlags} \
+      -C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build \
+      M="$PWD" INSTALL_MOD_PATH="$out" INSTALL_MOD_DIR=extra \
+      INSTALL_MOD_STRIP=1 modules_install
     install -Dm755 wireviewd "$out/bin/wireviewd"
     install -Dm755 wireviewctl "$out/bin/wireviewctl"
     runHook postInstall
