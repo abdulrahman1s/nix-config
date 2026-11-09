@@ -57,6 +57,9 @@ python312Packages.buildPythonApplication rec {
   build-system = [ python312Packages.setuptools ];
   dependencies = [ python312Packages.pillow cdp-use fetch-use websockets ];
 
+  # Upstream pins Pillow exactly; use nixpkgs' version for its image helpers.
+  pythonRelaxDeps = [ "pillow" ];
+
   # Upstream pins setuptools 84 exactly; this flake provides 83 for Python 3.12.
   postPatch = ''
     substituteInPlace pyproject.toml --replace-fail 'setuptools==84.0.0' 'setuptools==83.0.0'
