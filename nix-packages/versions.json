@@ -8,12 +8,12 @@
     "hash": "sha256-B0bpuldRgvXb4yYXuCpkXrk61XyliOWpNYaVprZa7nE="
   },
   "photocraft": {
-    "version": "0.21.0",
-    "hash": "sha256-MRXlbMZG2601QeObYyO4okMY/uYZTXhN320GX3tdLTc="
+    "version": "0.22.0",
+    "hash": "sha256-7t6vpGdd+9HyNR5r+kuC9URTaU6zbaG71cqLv19U8gI="
   },
   "filmcraft": {
-    "version": "0.18.0",
-    "hash": "sha256-AXnwWyDbhVv9Pe+RNs5g3uWfItLcv88j5KYlbgwVOwU="
+    "version": "0.19.0",
+    "hash": "sha256-dhSTQ8GXALpqyQX96KAZ4JF9BlB/QmpZODltl6HKISQ="
   },
   "sklauncher": {
     "version": "4.0.57",
@@ -24,8 +24,8 @@
     "hash": "sha256-CRX0kNYg9ZKmKXGt4iMQzbWd6BK9qiucnP89K/5nIU0="
   },
   "claude": {
-    "version": "2.1.319",
-    "sha256": "9977d90303740415af76bc808536b34620d0b30b7f08b0813603689875372ea0"
+    "version": "2.1.322",
+    "sha256": "9bb7558bd992ca457e6458bf1686572f7a3156b8331dd8443391dbfe590c1eed"
   },
   "brave-origin": {
     "version": "1.99.55",
