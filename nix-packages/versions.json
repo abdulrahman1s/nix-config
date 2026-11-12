@@ -1,19 +1,19 @@
 {
   "codex": {
-    "version": "0.167.1",
-    "hash": "sha256-qUXfPfg+hJ3Xt0eH4n+KRZwZRrDjr+Pcju+KjRhF/U8="
+    "version": "0.167.2",
+    "hash": "sha256-PXe+F0jTWkuw5/h1LN47EYkMYzOOjFmfAer6Slnhez0="
   },
   "chatgpt": {
     "version": "26.1106.51428",
     "hash": "sha256-g1anghkwsTW3QTR/rMvEPhaStEJMPqtxCpr1bAvrsTU="
   },
   "photocraft": {
-    "version": "0.22.0",
-    "hash": "sha256-7t6vpGdd+9HyNR5r+kuC9URTaU6zbaG71cqLv19U8gI="
+    "version": "0.23.1",
+    "hash": "sha256-Q4Ou9noHzDcK0lCm7WABUgXT5sRj+vP/Sw9nuBeMz8g="
   },
   "filmcraft": {
-    "version": "0.19.0",
-    "hash": "sha256-dhSTQ8GXALpqyQX96KAZ4JF9BlB/QmpZODltl6HKISQ="
+    "version": "0.20.1",
+    "hash": "sha256-Pk/qPLjUc+aPGJoKh5K6RhYPq1B62rOriSAHP9QfJPo="
   },
   "sklauncher": {
     "version": "4.0.57",
