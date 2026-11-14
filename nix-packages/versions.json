@@ -24,8 +24,8 @@
     "hash": "sha256-P3lVhQllyxrZ78BygYPMPHUESfrT3Am/meMhzluQJY4="
   },
   "claude": {
-    "version": "2.1.323",
-    "sha256": "d5f85ac4e9b7ca95e6bbeeeaf05af7c20ff62ddd2a0f49b1f4a0699c30ab0686"
+    "version": "2.1.325",
+    "sha256": "00b1b977bcc3f32eb69129f0ac3277aafb1aecbfb87c17c0af53806832ed436a"
   },
   "brave-origin": {
     "version": "1.99.57",
