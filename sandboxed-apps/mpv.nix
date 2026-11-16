@@ -1,7 +1,10 @@
 { pkgs, utils, ... }:
-
+let
+  modernGlass = pkgs.callPackage ../local-packages/modern-glass.nix { };
+  mpv = pkgs.mpv.override { scripts = [ modernGlass ]; };
+in
 utils.mkSandboxed {
-  package = pkgs.mpv;
+  package = mpv;
   name = "mpv";
   pathBinding = "file";
   resourceLimits = {
@@ -17,6 +20,9 @@ utils.mkSandboxed {
   extraPerms =
     { sloth, ... }:
     {
+      # The sandbox cannot read the shared MangoHud blacklist.
+      bubblewrap.env.DISABLE_MANGOHUD = "1";
+
       # Static fallbacks for drag-and-drop into an already-running mpv (where
       # mpv gets the path internally, not as a launch arg). For terminal /
       # file-manager launches, pathBinding narrows to the actual file's dir.
