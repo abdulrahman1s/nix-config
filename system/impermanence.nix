@@ -320,7 +320,7 @@ in
 
   system.userActivationScripts.minecraft-backups.text = ''
     backup_link="$HOME/minecraft-backups"
-    backup_target="/var/lib/minepanel/servers/minecraft/backups"
+    backup_target="/var/lib/minepanel/rootless/servers/minecraft/backups"
 
     if [ -L "$backup_link" ]; then
       ln -sfn "$backup_target" "$backup_link"

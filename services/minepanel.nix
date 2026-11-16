@@ -1,8 +1,21 @@
-{ pkgs, ... }:
+{ config, pkgs, username, ... }:
 
 let
   stateDir = "/var/lib/minepanel";
   environmentFile = "${stateDir}/minepanel.env";
+  rootlessDir = "${stateDir}/rootless";
+  podmanHome = "${stateDir}/podman-home";
+  podmanRuntime = "/run/user/1101";
+  podmanSocket = "/run/minepanel-podman.sock";
+  podman = config.virtualisation.podman.package;
+  # ProtectHome = true also hides /run/user, where rootless Podman keeps its
+  # runtime state; Podman then exits before starting anything. Hide home
+  # directories behind an empty tmpfs and bind back only this account's runtime.
+  podmanIsolation = {
+    ProtectHome = "tmpfs";
+    BindPaths = [ podmanRuntime ];
+    InaccessiblePaths = [ "/persist/home" "/persist/root" ];
+  };
 
   oldDataDir =
     "/var/lib/docker/volumes/games-minepanel-rnwhi4_minepanel-data/_data";
@@ -18,34 +31,130 @@ in
   # when joining that swarm, so the old-stateVersion default prevents startup.
   virtualisation.docker.daemon.settings."live-restore" = false;
 
-  virtualisation.oci-containers.backend = "docker";
+  # Keep the existing unrelated Docker workloads; MinePanel uses its own
+  # rootless Podman account and cannot control the host Docker daemon.
+  virtualisation.docker.enable = true;
+  virtualisation.oci-containers.backend = "podman";
   virtualisation.oci-containers.containers = {
     minepanel-backend = {
+      podman.user = "minepanel";
       image =
-        "ketbom/minepanel-backend@sha256:0e603c997ece0b48bed6f93c559fc640cf75fabccdcaefd918ce53188f754c5b";
+        "ketbom/minepanel-backend@sha256:8203a0158932cf5a19f1522a28168fc72e12f496621925d7ec197ba992c9b49e";
       environment = {
         NODE_ENV = "production";
         FRONTEND_URL = "https://minecraft.test";
       };
-      environmentFiles = [ environmentFile ];
+      environmentFiles = [ "${rootlessDir}/minepanel.env" ];
       volumes = [
-        "${stateDir}/servers:/app/servers"
-        "${stateDir}/data:/app/data"
-        "/var/run/docker.sock:/var/run/docker.sock"
+        "${rootlessDir}/servers:/app/servers"
+        "${rootlessDir}/data:/app/data"
+        "${podmanSocket}:/var/run/docker.sock"
       ];
-      ports = [ "8091:8091" ];
+      ports = [ "127.0.0.1:8091:8091" ];
     };
 
     minepanel-frontend = {
+      podman.user = "minepanel";
       image =
-        "ketbom/minepanel-frontend@sha256:3f21ecbb2f334934d5bd102ee3944ba9e7a968efb398ff8bbaad57503a4fb78e";
+        "ketbom/minepanel-frontend@sha256:ffbb7588982a213565547d2dab05ad8bb3b6f4b00220ef31738ddcb9f7a71725";
       environment = {
         NEXT_PUBLIC_BACKEND_URL = "https://minecraft.test/backend";
         NEXT_PUBLIC_DEFAULT_LANGUAGE = "en";
       };
       dependsOn = [ "minepanel-backend" ];
-      ports = [ "3001:3000" ];
+      ports = [ "127.0.0.1:3001:3000" ];
     };
+  };
+
+  users.groups.minepanel.gid = 1101;
+  users.users.minepanel = {
+    isSystemUser = true;
+    # Rootless OCI services need a stable runtime-directory path.
+    uid = 1101;
+    group = "minepanel";
+    home = podmanHome;
+    createHome = true;
+    homeMode = "0700";
+    linger = true;
+    subUidRanges = [{ startUid = 1100000; count = 65536; }];
+    subGidRanges = [{ startGid = 1100000; count = 65536; }];
+  };
+
+  networking.firewall.allowedTCPPorts = [ 25565 ];
+
+  systemd.sockets.minepanel-podman = {
+    wantedBy = [ "sockets.target" ];
+    socketConfig = {
+      ListenStream = podmanSocket;
+      SocketUser = "minepanel";
+      SocketGroup = "minepanel";
+      SocketMode = "0600";
+    };
+  };
+
+  systemd.services.minepanel-podman = {
+    requires = [ "user@1101.service" ];
+    after = [ "user@1101.service" ];
+    environment = { HOME = podmanHome; XDG_RUNTIME_DIR = podmanRuntime; };
+    serviceConfig = {
+      User = "minepanel";
+      Group = "minepanel";
+      ExecStart = "${podman}/bin/podman system service --time=0";
+      Delegate = true;
+      # newuidmap/newgidmap must retain their privilege for rootless mappings.
+      UMask = "0077";
+    } // podmanIsolation;
+  };
+
+  systemd.services.minepanel-rootless-migrate = {
+    requires = [ "minepanel-prepare.service" "user@1101.service" ];
+    after = [ "minepanel-prepare.service" "user@1101.service" ];
+    before = [ "podman-minepanel-backend.service" "podman-minepanel-frontend.service" ];
+    unitConfig.RequiresMountsFor = [ stateDir ];
+    path = with pkgs; [ acl coreutils docker util-linux podman ];
+    environment = {
+      MINEPANEL_STATE_DIR = stateDir;
+      MINEPANEL_PODMAN_HOME = podmanHome;
+      MINEPANEL_RUNTIME_DIR = podmanRuntime;
+      MINEPANEL_PODMAN = "${podman}/bin/podman";
+      MINEPANEL_LOGIN_USER = username;
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      UMask = "0077";
+      ExecStart = "${pkgs.python3}/bin/python3 ${./minepanel-rootless-migrate.py}";
+    };
+  };
+
+  systemd.services.podman-minepanel-backend = {
+    after = [ "minepanel-rootless-migrate.service" "minepanel-podman.socket" "user@1101.service" ];
+    requires = [ "minepanel-rootless-migrate.service" "minepanel-podman.socket" "user@1101.service" ];
+    environment.XDG_RUNTIME_DIR = podmanRuntime;
+    serviceConfig = podmanIsolation;
+  };
+  systemd.services.podman-minepanel-frontend = {
+    requires = [ "user@1101.service" ];
+    after = [ "user@1101.service" ];
+    environment.XDG_RUNTIME_DIR = podmanRuntime;
+    serviceConfig = podmanIsolation;
+  };
+
+  systemd.services.minepanel-servers = {
+    description = "Restore rootless Minecraft containers with a restart policy";
+    wantedBy = [ "multi-user.target" ];
+    requires = [ "podman-minepanel-backend.service" ];
+    after = [ "podman-minepanel-backend.service" ];
+    environment = { HOME = podmanHome; XDG_RUNTIME_DIR = podmanRuntime; };
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      User = "minepanel";
+      Group = "minepanel";
+      ExecStart = "${podman}/bin/podman start --all --filter should-start-on-boot=true --filter label=com.docker.compose.project";
+      ExecStop = "${podman}/bin/podman stop --service --all --filter label=com.docker.compose.project --time=120";
+      TimeoutStopSec = 150;
+    } // podmanIsolation;
   };
 
   systemd.tmpfiles.rules = [
@@ -65,8 +174,8 @@ in
     after = [ "docker.service" ];
     requires = [ "docker.service" ];
     before = [
-      "docker-minepanel-backend.service"
-      "docker-minepanel-frontend.service"
+      "podman-minepanel-backend.service"
+      "podman-minepanel-frontend.service"
     ];
     unitConfig.RequiresMountsFor = [ stateDir ];
     path = with pkgs; [
@@ -156,8 +265,4 @@ in
     '';
   };
 
-  systemd.services.docker-minepanel-backend = {
-    after = [ "minepanel-prepare.service" ];
-    requires = [ "minepanel-prepare.service" ];
-  };
 }
