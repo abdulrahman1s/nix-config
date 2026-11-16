@@ -106,6 +106,7 @@ in
       "/var/lib/bluetooth"
       "/var/lib/coolercontrol" # daemon plugins
       "/var/lib/OpenRGB" # device detection and server settings
+      "/var/lib/idle-update" # pending-update marker, so an interrupted download resumes after reboot
       # Containers / virtualisation
       "/var/lib/docker"
       "/var/lib/containers"

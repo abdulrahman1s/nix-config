@@ -5,6 +5,7 @@
     ./cloudflare.nix
     ./avahi.nix
     ./go2rtc.nix
+    ./idle-update.nix
     ./minepanel.nix
     ./slim.nix
     ./wireview-hwmon.nix
