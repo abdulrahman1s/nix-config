@@ -98,7 +98,14 @@ def record_built_paths() -> None:
     out_paths = os.environ.get("OUT_PATHS", "").split()
     if not drv_path or not out_paths:
         raise RuntimeError("post-build hook requires DRV_PATH and OUT_PATHS")
-    with BUILT_PATHS.open("a") as records:
+    # The daemon runs this hook as root, and fs.protected_regular denies root
+    # an O_CREAT open of the runner's file in sticky /tmp. The pipeline creates
+    # the file first; without it there is no pipeline to record builds for.
+    try:
+        fd = os.open(BUILT_PATHS, os.O_WRONLY | os.O_APPEND)
+    except FileNotFoundError:
+        return
+    with os.fdopen(fd, "a") as records:
         fcntl.flock(records, fcntl.LOCK_EX)
         for path in out_paths:
             records.write(f"{drv_path}\t{path}\n")
@@ -920,6 +927,9 @@ def run_pipeline() -> None:
 
     for state_file in (BUILT_PATHS, EVALUATION_PATHS, UPLOADED_PATHS, NEXT_FAILURES):
         state_file.unlink(missing_ok=True)
+    # Before any evaluation: import-from-derivation builds run the post-build
+    # hook, which can only append to an existing file.
+    BUILT_PATHS.write_text("")
 
     stats = Stats()
     client = CacheClient()

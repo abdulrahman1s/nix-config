@@ -163,5 +163,38 @@ class KernelBuildTests(unittest.TestCase):
             )
 
 
+class PostBuildHookTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.records = Path(temporary.name) / "built-paths"
+        patcher = patch.object(cache, "BUILT_PATHS", self.records)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        env = patch.dict(
+            cache.os.environ,
+            {"DRV_PATH": "/nix/store/a.drv", "OUT_PATHS": "/nix/store/a /nix/store/a-dev"},
+        )
+        env.start()
+        self.addCleanup(env.stop)
+
+    def test_hook_appends_to_the_pipeline_file(self):
+        self.records.write_text("/nix/store/z.drv\t/nix/store/z\n")
+        cache.record_built_paths()
+        self.assertEqual(
+            self.records.read_text().splitlines(),
+            [
+                "/nix/store/z.drv\t/nix/store/z",
+                "/nix/store/a.drv\t/nix/store/a",
+                "/nix/store/a.drv\t/nix/store/a-dev",
+            ],
+        )
+
+    def test_hook_never_creates_the_file(self):
+        # A root-owned file would block the runner's later truncation.
+        cache.record_built_paths()
+        self.assertFalse(self.records.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
