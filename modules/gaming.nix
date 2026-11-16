@@ -15,6 +15,9 @@ in
 
   programs.steam = {
     enable = true;
+    # Niri's documented workaround for black web views with GPU acceleration.
+    # Keep accelerated rendering while letting the system compose the window.
+    package = pkgs.steam.override { extraArgs = "-system-composer"; };
     protontricks.enable = true;
     remotePlay.openFirewall = true;
     dedicatedServer.openFirewall = true;
@@ -22,6 +25,25 @@ in
       pkgs.proton-ge-bin
     ];
   };
+
+  # CachyOS marks Steam as a background launcher (nice 16, idle I/O).
+  # Its web UI inherits idle I/O too, delaying the library under disk load.
+  services.ananicy.extraRules = [
+    {
+      name = "steam";
+      nice = 0;
+      sched = "normal";
+      ioclass = "best-effort";
+      ionice = 4;
+    }
+    {
+      name = "steamwebhelper";
+      nice = 0;
+      sched = "normal";
+      ioclass = "best-effort";
+      ionice = 4;
+    }
+  ];
 
   # While a game runs, raises CPU governor + sched priority + I/O priority.
   # Activate per-game via Steam launch options: `gamemoderun %command%`.
