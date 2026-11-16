@@ -59,7 +59,9 @@
     let
       system = "x86_64-linux";
       userArgs = import ./specialArgs.nix;
-      pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
+      # Reuse the system's nixpkgs instance. System modules consume these packages
+      # through inputs.self, and a separate import costs about a second per rebuild.
+      pkgs = self.nixosConfigurations.default.pkgs;
       maintainedPackages = import ./nix-packages { inherit pkgs inputs; };
       recoverySystem = self.nixosConfigurations.recovery.config.system.build.toplevel;
       recoveryDiskoScript = self.nixosConfigurations.recovery.config.system.build.diskoScript;
