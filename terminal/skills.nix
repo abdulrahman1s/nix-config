@@ -1,6 +1,7 @@
 { lib, pkgs, username, ... }:
 
 let
+  rea = pkgs.callPackage ../local-packages/rea.nix { };
   repositories = {
     vercel-skills = pkgs.fetchFromGitHub {
       owner = "vercel-labs";
@@ -55,6 +56,7 @@ let
     vercel-react-best-practices = "${repositories.vercel-agent-skills}/skills/react-best-practices";
     web-design-guidelines = "${repositories.vercel-agent-skills}/skills/web-design-guidelines";
     browser-use = "${repositories.browser-use}/skills/browser-use";
+    reverse-engineer-anything = "${rea}/lib/rea-agents/skills/reverse-engineer-anything";
     misterdownloadmanager = ../.agents/skills/misterdownloadmanager;
   };
 
@@ -74,6 +76,7 @@ let
 in
 {
   hjem.users.${username}.files = agentFiles // {
+    ".codex/skills/reverse-engineer-anything".source = skills.reverse-engineer-anything;
     ".codex/skills/misterdownloadmanager".source = skills.misterdownloadmanager;
     ".agents/skills/rtk/SKILL.md".source = rtkSkill;
     ".claude/skills/rtk/SKILL.md".source = rtkSkill;

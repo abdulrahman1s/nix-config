@@ -15,6 +15,7 @@ let
   browserUse = pkgs.callPackage ./local-packages/browser-use.nix {
     python312Packages = browserPython;
   };
+  rea = pkgs.callPackage ./local-packages/rea.nix { };
 in
 
 {
@@ -46,6 +47,8 @@ in
       inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.codex
       inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
       browserUse
+      # The headless Ghidra provider reads operator-selected host binaries.
+      rea
       wtype
       opencode
       hcxtools
@@ -80,6 +83,9 @@ in
   };
 
   users.groups.plugdev = { };
+
+  # A stable launcher also lets MCP registration survive package path changes.
+  hjem.users.${username}.files.".local/bin/rea".source = "${rea}/bin/rea";
 
   # ── Desktop associations ──────────────────────────────────
   xdg.mime.defaultApplications =
