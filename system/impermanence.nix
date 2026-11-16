@@ -211,6 +211,10 @@ in
         # ~/Github is a github-fs FUSE mount — never persist it (re-mounts each boot)
         # ── optional / confirm before relying on the wipe ──
         ".local/share/Steam" # gaming module enabled; large (games, library, login)
+        {
+          directory = ".local/share/s4mp"; # managed launcher workspace and logs; account data stays in the Sims prefix
+          mode = "0700";
+        }
         ".steam" # Steam locator symlinks + registry.vdf/token; small, complements Steam above
         ".config/Signal"
         {
