@@ -1,0 +1,175 @@
+--- a/src/daemon.rs
++++ b/src/daemon.rs
+@@ -405,9 +405,25 @@
+     // A decoder belongs to one connection, while the GPU process survives short
+     // pauses/seeks. Every new connection must start a fresh prediction chain.
+     let mut first_frame = true;
++    let mut last_frame = Instant::now();
+     while !shared.stop.load(Ordering::Relaxed) {
+-        match ws.read()? {
++        // Poll often enough for stop(), but tolerate short capture stalls on
++        // buffered/transitioning players without dropping an authorized stream.
++        let message = match ws.read() {
++            Ok(message) => message,
++            Err(tungstenite::Error::Io(error))
++                if matches!(
++                    error.kind(),
++                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
++                ) && last_frame.elapsed() < Duration::from_secs(15) =>
++            {
++                continue;
++            }
++            Err(error) => return Err(error.into()),
++        };
++        match message {
+             Message::Binary(bytes) => {
++                last_frame = Instant::now();
+                 let received_wall_ms = std::time::SystemTime::now()
+                     .duration_since(std::time::UNIX_EPOCH)?
+                     .as_secs_f64()
+--- a/extension/src/protocol.ts
++++ b/extension/src/protocol.ts
+@@ -125,7 +125,8 @@
+     };
+ export type FrameMessage =
+   | { type: 'ready' | 'available' }
+-  | { type: 'error' | 'stale'; message: string }
++  | { type: 'error'; message: string; retryable?: boolean }
++  | { type: 'stale'; message: string }
+   | { type: 'recycle'; buffer: ArrayBuffer }
+   | { type: 'decoded'; ageMs: number }
+   | {
+--- a/extension/src/frame-session.ts
++++ b/extension/src/frame-session.ts
+@@ -57,8 +57,8 @@
+   function send(value: FrameMessage) {
+     port?.postMessage(value);
+   }
+-  function fail(message: string) {
+-    if (!stopped) send({ type: 'error', message });
++  function fail(message: string, retryable = false) {
++    if (!stopped) send({ type: 'error', message, retryable });
+     closeAll();
+   }
+   function flush() {
+@@ -80,10 +80,10 @@
+   ws = env.connect(`ws://127.0.0.1:${auth.port}/v1/stream`);
+   ws.binaryType = 'arraybuffer';
+   ws.onopen = () => ws.send(JSON.stringify({ token: auth.token, quality, scale, protocol: 3 }));
+-  ws.onerror = () => fail('Cannot connect to the local engine. Run linux-rtx-vsr doctor.');
++  ws.onerror = () => fail('Cannot connect to the local engine. Run linux-rtx-vsr doctor.', true);
+   ws.onclose = () => {
+     if (!stopped)
+-      fail('Engine disconnected. The original video is playing; enable again to retry.');
++      fail('Engine disconnected. The original video is playing; enable again to retry.', true);
+   };
+   ws.onmessage = async (event) => {
+     if (typeof event.data === 'string') {
+--- a/extension/src/content.ts
++++ b/extension/src/content.ts
+@@ -46,7 +46,8 @@
+     hoverUntil = 0,
+     lastUrl = location.href,
+     lastState = '',
+-    lastReport = 0;
++    lastReport = 0,
++    retryAfter = 0;
+   const audio = new VsrAudioSync(),
+     clock = new VsrPresentationClock();
+   function key(v: HTMLVideoElement | null) {
+@@ -185,6 +186,16 @@
+         if (seq !== generation) return;
+         const data = event.data as FrameMessage;
+         if (data.type === 'error') {
++          // A transient backend/socket loss gets the same single retry as a
++          // startup timeout. Require actual presentation to reset the budget.
++          if (data.retryable && startupRetryKey !== s.key) {
++            startupRetryKey = s.key;
++            stop();
++            // Let the old daemon/stream finish releasing its lock and lease.
++            retryAfter = Date.now() + 500;
++            reconcile();
++            return;
++          }
+           fail(data.message);
+           return;
+         }
+@@ -433,6 +444,10 @@
+       if (failureStatus) state(failureStatus.name, failureStatus.message);
+       return;
+     }
++    if (Date.now() < retryAfter) {
++      state('starting', 'Reconnecting to NVIDIA VideoSuperRes…');
++      return;
++    }
+     if (!session) {
+       if (held) {
+         const picture = held;
+--- a/tests/lifecycle.rs
++++ b/tests/lifecycle.rs
+@@ -142,6 +142,9 @@
+             .unwrap()
+             .contains("Another tab")
+     );
++    // A short capture stall must not close the authorized stream. No GPU
++    // work is needed to distinguish recovery from a dead socket.
++    thread::sleep(Duration::from_secs(4));
+     // A malformed frame reaches the real Rust GPU subprocess but is rejected
+     // before loading NVIDIA libraries. Ordinary CI verifies worker recovery.
+     ws.send(tungstenite::Message::Binary(vec![1, 2, 3].into()))
+--- a/tests/worker.test.ts
++++ b/tests/worker.test.ts
+@@ -24,6 +24,8 @@
+     send: (value: unknown) => sent.push(value),
+     close() {},
+     onopen: () => {},
++    onclose: () => {},
++    onerror: () => {},
+     onmessage: async (_event: { data: string | ArrayBuffer }) => {},
+   };
+   const stop = startFrameSession(
+@@ -116,6 +118,23 @@
+   assert.ok(f.messages.some((m) => m.type === 'error' && /update/.test(m.message)));
+   assert.ok(!f.messages.some((m) => m.type === 'ready' || m.type === 'presented'));
+ });
++test('transport failures are retryable, while explicit stop and protocol errors are not', async () => {
++  const disconnected = fixture();
++  disconnected.socket.onclose();
++  disconnected.socket.onerror();
++  assert.equal(disconnected.messages.filter((m) => m.type === 'error').length, 1);
++  assert.ok(disconnected.messages.some((m) => m.type === 'error' && m.retryable));
++  const connecting = fixture();
++  connecting.socket.onerror();
++  assert.ok(connecting.messages.some((m) => m.type === 'error' && m.retryable));
++  const stopped = fixture();
++  stopped.stop();
++  stopped.socket.onclose();
++  assert.ok(!stopped.messages.some((m) => m.type === 'error'));
++  const protocol = fixture();
++  await protocol.socket.onmessage({ data: JSON.stringify({ type: 'ready', protocol: 1 }) });
++  assert.ok(protocol.messages.some((m) => m.type === 'error' && !m.retryable));
++});
+ test('pause holds the canvas without stale reports, discards pending pictures, and resumes the same stream', async () => {
+   const f = fixture();
+   await f.socket.onmessage({ data: JSON.stringify({ type: 'ready', protocol: 3 }) });
+--- a/tests/browser.ts
++++ b/tests/browser.ts
+@@ -630,15 +630,10 @@
+         tabId,
+       );
+     await waitState((v) => v?.state === 'active');
+-    // Backend failure must reveal the original immediately, then permit retry.
++    // A lost backend must recover automatically with a new stream epoch.
++    const previousEpoch = (await state())?.epoch;
+     cli('stop');
+-    await waitState((v) => ['error', 'bypassed'].includes(v?.state || ''));
+-    assert.equal(await page.locator('.player iframe').count(), 0);
+-    await worker.evaluate(
+-      (tabId) => chrome.tabs.sendMessage(tabId, { type: 'policy-changed' }),
+-      tabId,
+-    );
+-    await waitState((v) => v?.state === 'active');
++    await waitState((v) => v?.state === 'active' && v.epoch !== previousEpoch);
+     const backend = JSON.parse(cli('status'));
+     gpuWorkerPids = [
+       ...new Set(

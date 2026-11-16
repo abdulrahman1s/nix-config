@@ -2,6 +2,44 @@
 
 let
   braveOrigin = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.brave-origin;
+  rtxVsr = import ../local-packages/linux-rtx-vsr.nix { inherit pkgs; };
+  vsrHost = pkgs.writeShellScript "linux-rtx-vsr-native-host" ''
+    # CUDA's default ~/.nv cache is ephemeral inside the browser sandbox.
+    export CUDA_CACHE_PATH="$HOME/.cache/nvidia/ComputeCache"
+    ${pkgs.coreutils}/bin/mkdir -p "$CUDA_CACHE_PATH"
+    exec ${rtxVsr}/bin/linux-rtx-vsr native-host "$@"
+  '';
+  vsrManifestName = "io.github.abdulrahman1s.linux_rtx_vsr.json";
+  vsrManifest = pkgs.writeText vsrManifestName (builtins.toJSON {
+    name = "io.github.abdulrahman1s.linux_rtx_vsr";
+    description = "Linux RTX VSR native integration";
+    path = toString vsrHost;
+    type = "stdio";
+    allowed_origins = [ "chrome-extension://pdobgdmlfcnimbnndkchfocncchfoadm/" ];
+  });
+  mdm = pkgs.callPackage ../local-packages/misterdownloadmanager.nix { };
+  # MDM's host starts the program named in `app-path` beside itself when the
+  # app is not running. From inside Brave's sandbox it can only ask the user
+  # manager, through the socket in sandboxed-apps/misterdownloadmanager.nix.
+  mdmStart = pkgs.writeShellScript "misterdownloadmanager-start" ''
+    exec ${pkgs.socat}/bin/socat -u OPEN:/dev/null \
+      UNIX-CONNECT:"$XDG_RUNTIME_DIR/misterdownloadmanager-launch.sock"
+  '';
+  # A copy, not a symlink: the host finds `app-path` through /proc/self/exe.
+  mdmHost = pkgs.runCommandLocal "misterdownloadmanager-browser-host" { } ''
+    mkdir -p "$out"
+    cp ${mdm}/libexec/misterdownloadmanager-host/misterdownloadmanager-nmhost "$out/"
+    printf %s ${mdmStart} > "$out/app-path"
+  '';
+  mdmManifestName = "com.misterdownloadmanager.host.json";
+  mdmManifest = pkgs.writeText mdmManifestName (builtins.toJSON {
+    name = "com.misterdownloadmanager.host";
+    description = "Mister Download Manager";
+    path = "${mdmHost}/misterdownloadmanager-nmhost";
+    type = "stdio";
+    # The ID the unpacked extension's manifest key gives it.
+    allowed_origins = [ "chrome-extension://oogbclbbninliongijffeeggalppliok/" ];
+  });
   warpHosts = config.services.cloudflare-warp-proxy.braveHosts;
   warpVersion = (builtins.fromJSON (builtins.readFile ../config/brave-warp-extension/manifest.json)).version;
 
@@ -30,8 +68,13 @@ let
   '';
 
   chromiumWaylandArgs = [
-    "--enable-features=UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks"
+    "--enable-features=UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecoder,VaapiVideoEncoder,VaapiIgnoreDriverChecks,AcceleratedVideoDecodeLinuxGL,AcceleratedVideoEncoder,VaapiOnNvidiaGPUs"
     "--ozone-platform-hint=auto"
+    # Keep NVIDIA's accelerated video path available to the browser.
+    "--use-gl=angle"
+    "--use-angle=gl"
+    # Retain the package wrapper's disabled features when adding Vulkan.
+    "--disable-features=OutdatedBuildDetector,UseChromeOSDirectVideoDecoder,Vulkan"
     "--ignore-gpu-blocklist"
     "--enable-gpu-rasterization"
     "--enable-zero-copy"
@@ -65,11 +108,13 @@ let
     ,
     }:
     let
-      # --user-data-dir pinned to the bound config path; mkdir's $TMPDIR — see
-      # nixpak singleton-socket comment, TMPDIR lives under XDG_RUNTIME_DIR so
-      # every sandbox instance shares the ProcessSingleton dir.
+      # Keep the profile path stable; TMPDIR is a short bind of its shared
+      # singleton directory so separate launches can reach the same socket.
       wrappedBrave = pkgs.writeShellScriptBin name ''
         ${pkgs.coreutils}/bin/mkdir -p "$TMPDIR"
+        ${pkgs.lib.optionalString (name == "brave") ''
+          export LIBVA_DRIVER_NAME=nvidia
+        ''}
         exec ${braveOrigin}/bin/brave-origin \
           ${
             if userDataDir == null then
@@ -104,7 +149,11 @@ let
           ;
         package = bravePackage;
         binPath = "bin/${name}";
-        homeBinds.rw = [
+        homeBinds.rw = pkgs.lib.optionals (name == "brave") [
+          { suffix = "/.config/linux-rtx-vsr"; }
+          { suffix = "/.local/state/linux-rtx-vsr"; }
+          { suffix = "/.local/share/linux-rtx-vsr"; }
+        ] ++ [
           { suffix = "/.pki/nssdb"; }
           { suffix = "/Downloads"; }
           # Chromium puts the HTTP disk cache under ~/.cache/<configDir>, NOT in
@@ -116,9 +165,11 @@ let
           # Reuse the persisted fontconfig index instead of rescanning fonts
           # inside each short-lived browser sandbox.
           { suffix = "/.cache/fontconfig"; }
-          { suffix = "/.local/share/applications"; }
-          { suffix = "/.local/share/icons"; }
-          { suffix = "/.config/mimeapps.list"; perms = "rw"; }
+        ];
+        # MDM's host reads the app's IPC port and token there. The app
+        # replaces ipc.json on each start, so bind the folder, not the file.
+        homeBinds.ro = pkgs.lib.optionals (name == "brave") [
+          { suffix = "/.local/share/misterdownloadmanager"; }
         ];
         extraPackages = [
           sandboxedXdgUtils
@@ -127,13 +178,39 @@ let
         ];
       };
 
-      # Share Chromium's tmp dir across sandbox invocations.
+      # Unix socket paths must fit in 107 bytes. Keep the shared directory
+      # outside /tmp: nixpak mounts its private /tmp after the bind mounts,
+      # which would hide the singleton socket from subsequent launches.
       extraPerms =
         { sloth, ... }:
         {
-          bubblewrap.env.TMPDIR = sloth.concat' sloth.runtimeDir "/${name}-singleton-tmp";
+          bubblewrap.env.TMPDIR = "/run/${name}-singleton";
+          bubblewrap.bind.rw = [
+            [
+              (sloth.mkdir (sloth.concat' sloth.homeDir "/.config/${configDir}/.singleton-tmp"))
+              "/run/${name}-singleton"
+            ]
+          ] ++ pkgs.lib.optionals (name == "brave") [
+            # Create the persisted cache before binding, including on first launch.
+            (sloth.mkdir (sloth.concat' sloth.homeDir "/.cache/nvidia/ComputeCache"))
+            # connect() needs write access; the socket only starts MDM.
+            (sloth.concat' sloth.runtimeDir "/misterdownloadmanager-launch.sock")
+          ];
           bubblewrap.bind.ro = pkgs.lib.optionals (name == "brave") [
             "/etc/brave-warp-extension"
+            "/etc/linux-rtx-vsr/extension"
+            # Origin searches its compiled default profile for native hosts,
+            # even with --user-data-dir. Bind the actual store file: the /etc
+            # registry contains symlinks through /etc/static, absent in nixpak.
+            [
+              (toString vsrManifest)
+              (sloth.concat' sloth.homeDir "/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts/${vsrManifestName}")
+            ]
+            "/etc/misterdownloadmanager/extension"
+            [
+              (toString mdmManifest)
+              (sloth.concat' sloth.homeDir "/.config/BraveSoftware/Brave-Origin/NativeMessagingHosts/${mdmManifestName}")
+            ]
           ];
         };
     in
@@ -148,10 +225,7 @@ let
     configDir = "BraveSoftware/Brave-Origin-Nightly";
     wmClass = "brave-origin";
     extraBraveArgs = [
-      "--load-extension=/etc/brave-warp-extension"
-      # Browser Use connects only through the loopback DevTools endpoint.
-      "--remote-debugging-address=127.0.0.1"
-      "--remote-debugging-port=9222"
+      "--load-extension=/etc/brave-warp-extension,/etc/linux-rtx-vsr/extension,/etc/misterdownloadmanager/extension"
     ];
   };
 
@@ -160,10 +234,13 @@ let
   privateProfile = "/var/lib/brave-private/.config/BraveSoftware/Brave-Browser";
 in
 {
-  packages = [ brave ];
+  packages = [ brave rtxVsr ];
 
   module = {
     environment.etc."brave-warp-extension".source = warpExtension;
+    environment.etc."linux-rtx-vsr/extension".source = "${rtxVsr}/share/linux-rtx-vsr/extension";
+    environment.etc."linux-rtx-vsr/native-messaging-hosts/${vsrManifestName}".source = vsrManifest;
+    environment.etc."misterdownloadmanager/extension".source = "${mdm}/share/misterdownloadmanager/extension-chromium";
 
     system.activationScripts.brave-host-profile-migration = {
       deps = [ "users" ];

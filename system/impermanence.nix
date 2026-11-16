@@ -159,6 +159,18 @@ in
         ".config/blender" # Blender preferences and Blender Lab MCP extension
         ".config/BraveSoftware" # browser profile (logins, cookies, history)
         {
+          directory = ".config/linux-rtx-vsr"; # native enhancement settings
+          mode = "0700";
+        }
+        {
+          directory = ".local/state/linux-rtx-vsr"; # private backend state and logs
+          mode = "0700";
+        }
+        {
+          directory = ".local/share/linux-rtx-vsr"; # application-owned runtime data
+          mode = "0700";
+        }
+        {
           directory = ".local/share/misterdownloadmanager"; # download list, settings, IPC token, torrents state
           mode = "0700";
         }
