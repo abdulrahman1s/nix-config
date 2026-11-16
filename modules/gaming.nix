@@ -140,7 +140,7 @@ in
 
   services.udev.extraRules = ''
     SUBSYSTEMS=="usb|hidraw", ATTRS{idVendor}=="258a", ATTRS{idProduct}=="010c", TAG+="uaccess", TAG+="AULA_F75", GROUP="users", MODE="0660"
-    KERNEL=="event*", SUBSYSTEM=="input", ATTRS{idVendor}=="258a", ATTRS{idProduct}=="010c", TAG+="uaccess", TAG+="AULA_F75", GROUP="users", MODE="0660"
+    KERNEL=="event*", SUBSYSTEM=="input", ATTRS{idVendor}=="258a", ATTRS{idProduct}=="010c", TAG+="AULA_F75", GROUP="input", MODE="0660"
   '';
 
   boot.blacklistedKernelModules = [

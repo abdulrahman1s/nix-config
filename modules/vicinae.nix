@@ -139,7 +139,7 @@ in
 
   systemd.tmpfiles.rules =
     [
-      "d /home/${username}/.local/share/vicinae 0755 ${username} users -"
+      "d /home/${username}/.local/share/vicinae 0700 ${username} users -"
       "d ${extDir} 0755 ${username} users -"
     ]
     ++ lib.mapAttrsToList (name: drv: "L+ ${extDir}/${name} - - - - ${drv}") extensions;

@@ -22,7 +22,8 @@ in
   };
 
   services.udev.extraRules = ''
-    KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="keyd virtual keyboard", GROUP="users", MODE="0660", SYMLINK+="input/by-id/keyd-virtual-keyboard-%k"
+    # The RGB monitor has the input supplementary group; desktop apps do not.
+    KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="keyd virtual keyboard", GROUP="input", MODE="0660", SYMLINK+="input/by-id/keyd-virtual-keyboard-%k"
   '';
 
   services.xserver.enable = true;

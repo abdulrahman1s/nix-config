@@ -1,4 +1,42 @@
-{ pkgs, username, ... }: {
+{ pkgs, username, ... }:
+let
+  controllerNode = pkgs.writeShellScript "sandbox-controller-node" ''
+    set -eu
+    action=$1 major=$2 minor=$3 device=$4
+    case "$major:$minor" in *[!0-9:]*|:*|*:) exit 1 ;; esac
+    case "$device" in event[0-9]*) ;; *) exit 1 ;; esac
+    node="/dev/sandbox-input/$device"
+    case "$action" in
+      add)
+        ${pkgs.coreutils}/bin/install -d -m 0755 -o root -g root /dev/sandbox-input
+        if [ ! -e "$node" ]; then
+          ${pkgs.coreutils}/bin/mknod "$node" c "$major" "$minor"
+        fi
+        ${pkgs.coreutils}/bin/chown ${username}:users "$node"
+        ${pkgs.coreutils}/bin/chmod 0600 "$node"
+        ;;
+      remove) ${pkgs.coreutils}/bin/rm -f -- "$node" ;;
+    esac
+  '';
+in
+{
+  # The persisted file may predate this policy and retain mode 0644.
+  system.userActivationScripts.shell-secret-permissions.text = ''
+    if [ -f "$HOME/.zsh_secrets" ] && [ ! -L "$HOME/.zsh_secrets" ]; then
+      ${pkgs.coreutils}/bin/chmod 0600 "$HOME/.zsh_secrets"
+    fi
+    for private_dir in ".codex" ".config/opencode" ".local/share/opencode" ".local/state/opencode" ".local/share/vicinae"; do
+      if [ -d "$HOME/$private_dir" ] && [ ! -L "$HOME/$private_dir" ]; then
+        ${pkgs.coreutils}/bin/chmod 0700 "$HOME/$private_dir"
+      fi
+    done
+  '';
+
+  # A separate device tree allows controller hotplug without exposing keyboards.
+  systemd.tmpfiles.rules = [ "d /dev/sandbox-input 0755 root root -" ];
+  services.udev.extraRules = ''
+    ACTION=="add|remove", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_JOYSTICK}=="1", RUN+="${controllerNode} $env{ACTION} %M %m %k"
+  '';
   # Copy Fail: root on virtually any Linux
   boot.blacklistedKernelModules = [
     "algif_aead"
@@ -13,12 +51,11 @@
   };
   security.pam.services.sudo.u2f.enable = true;
 
-  # Never print the sudo lecture. Its "already lectured this user" marker lives
-  # in /var/db/sudo on the wiped root, so the default lecture=once would reprint
-  # on the first sudo of every boot under impermanence.
-  security.sudo.extraConfig = ''
-    Defaults lecture=never
-  '';
+  security.sudo.enable = false;
+  security.sudo-rs = {
+    enable = true;
+    wheelNeedsPassword = true;
+  };
 
   systemd.services.sandbox-hidraw-devices = {
     description = "Create stable hidraw nodes for sandbox hotplug";

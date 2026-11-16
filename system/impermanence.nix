@@ -134,7 +134,10 @@ in
         ".ssh"
         ".cargo"
         ".rustup"
-        ".codex"
+        {
+          directory = ".codex";
+          mode = "0700";
+        }
         ".symposium" # agent configuration, plugin sources and sync state
         {
           directory = ".config/ChatGPT"; # desktop app sign-in and project state
@@ -162,7 +165,10 @@ in
         ".local/share/atuin"
         ".local/share/zoxide"
         ".local/share/rtk" # token savings history and command logs
-        ".local/share/vicinae" # clipboard history database and copied item data
+        {
+          directory = ".local/share/vicinae"; # clipboard history and copied data
+          mode = "0700";
+        }
         ".local/share/nautilus/tags" # file tags and metadata database
         {
           directory = ".config/PowerMonitor"; # WireView settings, LAN secret, and logs
@@ -214,9 +220,18 @@ in
           mode = "0700";
         }
         ".config/Code"
-        ".config/opencode" # config, plugins, and global agent instructions
-        ".local/share/opencode" # credentials, session database, logs, and snapshots
-        ".local/state/opencode" # prompt history and model selection
+        {
+          directory = ".config/opencode";
+          mode = "0700";
+        }
+        {
+          directory = ".local/share/opencode"; # credentials and conversation database
+          mode = "0700";
+        }
+        {
+          directory = ".local/state/opencode"; # prompt history and model selection
+          mode = "0700";
+        }
         ".config/zed"
         ".local/share/zed" # project trust, workspace state, extensions, and agent data
         ".npm"

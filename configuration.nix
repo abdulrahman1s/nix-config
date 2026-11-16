@@ -94,9 +94,6 @@
     extraGroups = [
       "networkmanager"
       "wheel"
-      "libvirtd"
-      "podman"
-      "docker"
       "openrazer"
     ];
   };

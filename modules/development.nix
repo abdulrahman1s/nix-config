@@ -12,6 +12,8 @@
     config = {
       user.name = fullName;
       user.email = email;
+      # Keep HTTP authentication in the terminal instead of falling back to SSH_ASKPASS.
+      core.askPass = "";
     };
   };
 
