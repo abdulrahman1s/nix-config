@@ -204,6 +204,10 @@ in
         ".config/photocraft" # PhotoCraft settings
         ".config/filmcraft" # FilmCraft settings
         {
+          directory = ".config/wordcraft"; # WordCraft settings and recovery data
+          mode = "0700";
+        }
+        {
           directory = ".config/app.mangodisk.desktop"; # MangoDisk preferences and exclusions
           mode = "0700";
         }

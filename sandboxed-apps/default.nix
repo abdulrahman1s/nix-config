@@ -16,6 +16,7 @@ let
   wireview = call ./wireview-linux.nix;
   photocraft = call ./photocraft.nix;
   filmcraft = call ./filmcraft.nix;
+  wordcraft = call ./wordcraft.nix;
   digup = call ./digup.nix;
   anydesk = call ./anydesk.nix;
   discord = call ./discord.nix;
@@ -64,6 +65,7 @@ in
     wireview.sandbox
     photocraft
     filmcraft
+    wordcraft
     digup
     anydesk
     discord
