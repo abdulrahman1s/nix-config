@@ -17,12 +17,14 @@ let
   photocraft = call ./photocraft.nix;
   filmcraft = call ./filmcraft.nix;
   digup = call ./digup.nix;
+  discord = call ./discord.nix;
 in
 {
   imports = [ browser.module ];
 
   xdg.mime.defaultApplications = {
     "x-scheme-handler/stremio" = "com.sandboxed.stremio.desktop";
+    "x-scheme-handler/discord" = "com.sandboxed.discord.desktop";
   };
 
   system.userActivationScripts.stremio-data.text = ''
@@ -62,6 +64,7 @@ in
     photocraft
     filmcraft
     digup
+    discord
   ] ++ browser.packages;
 
   services.udev.packages = [ wireview.package ];

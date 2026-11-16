@@ -197,6 +197,10 @@ in
         ".local/share/Steam" # gaming module enabled; large (games, library, login)
         ".steam" # Steam locator symlinks + registry.vdf/token; small, complements Steam above
         ".config/Signal"
+        {
+          directory = ".config/discord"; # Discord login, settings, and pinned-module links
+          mode = "0700";
+        }
         ".config/photocraft" # PhotoCraft settings
         ".config/filmcraft" # FilmCraft settings
         {
