@@ -1,5 +1,21 @@
 # ── Shell Functions ──────────────────────────────────
 
+# Switch the shared Codex login; existing sessions keep their current workspace.
+# ai-usagebar preserves both saved logins and keeps quota polling tied to each one.
+codex-switch() {
+  emulate -L zsh
+  setopt pipefail
+  local active
+  active=$(ai-usagebar account status --json | jq -er '.codex.active_label') || return $?
+  case "$active" in
+    business) ai-usagebar account switch personal --codex ;;
+    personal) ai-usagebar account switch business --codex ;;
+    *) print -u2 -- "codex-switch: current login is not Business or Personal"; return 1 ;;
+  esac
+
+  pkill -f codex
+}
+
 # Guard the interactive command against accidental reboots.
 reboot() {
   if read -q "REPLY?Reboot the PC now? [y/N] "; then

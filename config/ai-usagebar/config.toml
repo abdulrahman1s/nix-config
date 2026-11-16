@@ -1,0 +1,26 @@
+[ui]
+primary = "openai"
+
+[openai]
+enabled = true
+show_default_account = false
+
+[[openai.accounts]]
+label = "business"
+codex_auth_path = "~/.codex/usagebar/business/auth.json"
+
+[[openai.accounts]]
+label = "personal"
+codex_auth_path = "~/.codex/usagebar/personal/auth.json"
+
+[anthropic]
+enabled = false
+
+[zai]
+enabled = false
+
+[openrouter]
+enabled = false
+
+[notifications]
+enabled = false

@@ -277,7 +277,7 @@ capsule_fill = "surface_variant"
 capsule_opacity = 1.0
 capsule_border = ""
 hover_highlight = true
-start = ["launcher", "workspaces", "clock", "media", "bongocat"]
+start = ["launcher", "workspaces", "clock", "ai_usage", "ai_usage_personal", "media", "bongocat"]
 center = ["active_window"]
 end = ["tray", "keyboard_layout", "clipboard", "battery", "airpods", "wireview", "privacy", "screenshot", "volume", "control-center", "session"]
 
@@ -331,7 +331,7 @@ type = "notification"
 type = "power_profile"
 
 [plugins]
-enabled = ["noctalia/screen_recorder", "noctalia/bongocat", "harveywuk/airpods", "systemconf/wireview", "tordex/nvtop"]
+enabled = ["noctalia/screen_recorder", "noctalia/bongocat", "harveywuk/airpods", "systemconf/wireview", "tordex/nvtop", "felipeartur/ai-usagebar"]
 auto_update = "none"
 
 [[plugins.source]]
@@ -376,6 +376,22 @@ tooltip_format = "{:%H:%M %a, %b %d}"
 max_length = 300
 title_scroll = "on_hover"
 hide_when_no_media = false
+
+[widget.ai_usage]
+type = "felipeartur/ai-usagebar:bar"
+vendor = "openai"
+account = "business"
+show_name = true
+visualization = "gauge"
+extras = "countdown"
+
+[widget.ai_usage_personal]
+type = "felipeartur/ai-usagebar:bar"
+vendor = "openai"
+account = "personal"
+show_name = true
+visualization = "gauge"
+extras = "countdown"
 
 [widget.bongocat]
 type = "noctalia/bongocat:cat"

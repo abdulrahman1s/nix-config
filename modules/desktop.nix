@@ -1,6 +1,7 @@
 { lib, pkgs, config, inputs, username, ... }:
 let
   noctaliaPackage = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.noctalia;
+  aiUsagebar = pkgs.callPackage ../local-packages/ai-usagebar.nix { };
 in
 {
   services.xserver.xkb = {
@@ -79,6 +80,7 @@ in
 
   # Desktop apps
   users.users.${username}.packages = with pkgs; [
+    aiUsagebar
     gnome-calculator
     gnome-disk-utility
     gnome-logs
@@ -108,6 +110,10 @@ in
     xdg-desktop-portal
     vicinae # Launcher
   ];
+
+  # Noctalia's user service searches ~/.local/bin before the system profiles.
+  hjem.users.${username}.files.".local/bin/ai-usagebar".source =
+    "${aiUsagebar}/bin/ai-usagebar";
 
   # Needed for nautilus to mount partitions
   services.udisks2.enable = true;
