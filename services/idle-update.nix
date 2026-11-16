@@ -60,6 +60,7 @@ in
       pkgs.util-linux
       pkgs.btrfs-progs
       pkgs.gawk
+      pkgs.jq
       pkgs.nvd
     ];
     serviceConfig = {
@@ -126,12 +127,40 @@ in
 
       as_user git -C ${flake} fetch --quiet ${repoUrl} \
         +refs/heads/master:refs/remotes/origin/master
+
+      # Inputs CI cannot fetch, such as EasyPlay's git+file checkout, stay
+      # uncommitted, so the working-tree lock differs from every lock CI
+      # commits. When it only adds entries, set it aside for the pull and
+      # re-lock the missing inputs afterwards.
+      lock_stashed=0
+      if ! as_user git -C ${flake} diff --quiet HEAD -- flake.lock; then
+        if ! as_user git -C ${flake} show HEAD:flake.lock | jq -e --slurpfile local ${flake}/flake.lock '
+          .nodes as $head | $local[0].nodes as $work
+          | all($head | to_entries[];
+              if .key == "root"
+              then all(.value.inputs | to_entries[]; $work.root.inputs[.key] == .value)
+              else $work[.key] == .value
+              end)
+        ' > /dev/null; then
+          echo "flake.lock has local changes besides added inputs; skipping" >&2
+          rm -f ${pending}
+          exit 1
+        fi
+        as_user git -C ${flake} stash push --quiet -m "idle-update: local flake.lock" -- flake.lock
+        lock_stashed=1
+      fi
+
       # Git aborts without touching anything when local commits diverge or
       # uncommitted edits overlap the incoming changes.
       if ! as_user git -C ${flake} merge --ff-only --quiet origin/master; then
+        [ "$lock_stashed" = 0 ] || as_user git -C ${flake} stash pop --quiet
         echo "cannot fast-forward ${flake} to origin/master; commit/push or stash local work. Skipping" >&2
         rm -f ${pending}
         exit 1
+      fi
+      if [ "$lock_stashed" = 1 ]; then
+        as_user git -C ${flake} stash drop --quiet
+        as_user nix flake lock ${flake} --option download-speed ${downloadKiB}
       fi
       echo "${flake} is at $(as_user git -C ${flake} log -1 --format='%h %s')"
       touch ${pending}
