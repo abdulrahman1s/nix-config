@@ -1,7 +1,7 @@
 { pkgs, inputs, utils, sandboxedXdgUtils, ... }:
 
 let
-  sklauncher = inputs.self.packages.${pkgs.system}.sklauncher;
+  sklauncher = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.sklauncher;
 
   minecraft-pkg = pkgs.symlinkJoin {
     name = "minecraft";

@@ -41,10 +41,10 @@ in
     packages = (with pkgs; [
       # Codex needs user-selected project directories and host development tools.
       # A fixed NixPak file bind would block that core workflow.
-      inputs.self.packages.${pkgs.system}.chatgpt
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.chatgpt
       blender
-      inputs.self.packages.${pkgs.system}.codex
-      inputs.self.packages.${pkgs.system}.claude-code
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.codex
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.claude-code
       browserUse
       wtype
       opencode
@@ -70,7 +70,7 @@ in
       # Tools
       # Disk analysis and cleanup need the real filesystem across user-selected
       # locations; a fixed NixPak allowlist would hide scan targets and caches.
-      inputs.self.packages.${pkgs.system}.mangodisk
+      inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.mangodisk
       ethtool
       just
       nh

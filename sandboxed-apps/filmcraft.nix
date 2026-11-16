@@ -1,7 +1,7 @@
 { inputs, pkgs, utils, ... }:
 
 utils.mkSandboxed {
-  package = inputs.self.packages.${pkgs.system}.filmcraft;
+  package = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.filmcraft;
   name = "filmcraft";
   displayName = "FilmCraft";
   icon = ./icons/adobe-premiere-pro.svg;

@@ -1,7 +1,7 @@
 { inputs, pkgs, utils, ... }:
 
 utils.mkSandboxed {
-  package = inputs.self.packages.${pkgs.system}.photocraft;
+  package = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.photocraft;
   name = "photocraft";
   displayName = "PhotoCraft";
   icon = ./icons/adobe-photoshop.svg;
