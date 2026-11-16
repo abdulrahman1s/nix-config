@@ -1,0 +1,97 @@
+# Recovery shell: an always-visible bar and dock, so every tool can be found and
+# started with the mouse. Settings changed in the GUI are kept separately in
+# ~/.local/state/noctalia/settings.toml.
+
+[shell]
+telemetry_enabled = false
+setup_wizard_enabled = false
+# Answers GParted's and other PolicyKit password prompts.
+polkit_agent = true
+
+[shell.launcher]
+categories = true
+show_icons = true
+
+# Noctalia makes its wallpaper surface click-through, so clicks on the desktop
+# still reach labwc and open its menu.
+[wallpaper]
+enabled = true
+fill_mode = "crop"
+
+[wallpaper.default]
+path = "/etc/nixos-recovery/wallpaper.jxl"
+
+# The lock screen needs a PAM service this system doesn't define, and a lock
+# that can't be undone would leave the recovery stuck.
+[lockscreen]
+enabled = false
+
+[[shell.session.actions]]
+action = "logout"
+
+[[shell.session.actions]]
+action = "reboot"
+
+[[shell.session.actions]]
+action = "reboot_uefi"
+label = "Reboot to Firmware Setup"
+
+[[shell.session.actions]]
+action = "shutdown"
+variant = "destructive"
+
+# labAdwaita-dark's colors with the Adwaita accent, from
+# palettes/labAdwaita-dark.json (recovery/noctalia-palette.json).
+[theme]
+mode = "dark"
+source = "custom"
+custom_palette = "labAdwaita-dark"
+
+# Give Foot and GTK apps the same colors. Ghostty keeps the main system's own
+# settings (recovery/shell.nix).
+[theme.templates]
+builtin_ids = ["foot", "gtk3", "gtk4"]
+
+[bar.main]
+position = "top"
+auto_hide = false
+reserve_space = true
+# The taskbar lists every window, including minimized ones, so a click brings
+# any of them back.
+start = ["launcher", "workspaces", "taskbar"]
+center = ["clock"]
+end = ["cpu", "ram", "temperature", "tray", "screenshot", "network", "control-center", "session"]
+
+[widget.cpu]
+type = "sysmon"
+stat = "cpu_usage"
+
+[widget.ram]
+type = "sysmon"
+stat = "ram_used"
+
+[widget.temperature]
+type = "sysmon"
+stat = "cpu_temp"
+
+[dock]
+enabled = true
+position = "bottom"
+auto_hide = false
+reserve_space = true
+show_running = true
+show_dots = true
+launcher_position = "start"
+pinned = [
+  "recovery-enter-main",
+  "recovery-repair-bootloader",
+  "recovery-main-logs",
+  "recovery-disk-health",
+  "recovery-guide",
+  "recovery-system-monitor",
+  "gparted",
+  "pcmanfm",
+  "com.mitchellh.ghostty",
+  "foot",
+  "brave-origin",
+]

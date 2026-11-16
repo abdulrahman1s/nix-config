@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!--
+  Recovery desktop. Everything works with the mouse: windows have titlebar
+  buttons, a right click on the desktop opens the root menu, and Noctalia's bar
+  and dock stay visible. The shortcuts below are optional extras.
+-->
+<labwc_config>
+  <core>
+    <gap>8</gap>
+  </core>
+
+  <placement>
+    <policy>center</policy>
+  </placement>
+
+  <theme>
+    <name>labAdwaita-dark</name>
+    <icon>Adwaita</icon>
+    <fallbackAppIcon>application-x-executable</fallbackAppIcon>
+    <cornerRadius>8</cornerRadius>
+    <dropShadows>yes</dropShadows>
+    <font>
+      <name>sans</name>
+      <size>11</size>
+    </font>
+  </theme>
+
+  <windowSwitcher preview="no" outlines="yes">
+    <osd style="thumbnail" />
+  </windowSwitcher>
+
+  <keyboard>
+    <default />
+    <keybind key="W-space">
+      <action name="Execute" command="noctalia msg panel-toggle launcher" />
+    </keybind>
+    <keybind key="W-x">
+      <action name="Execute" command="ghostty" />
+    </keybind>
+    <!-- Foot renders in software, so it still works if Ghostty's renderer fails. -->
+    <keybind key="C-A-t">
+      <action name="Execute" command="foot" />
+    </keybind>
+  </keyboard>
+
+  <mouse>
+    <default />
+  </mouse>
+</labwc_config>

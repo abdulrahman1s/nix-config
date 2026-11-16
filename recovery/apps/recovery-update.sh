@@ -61,7 +61,7 @@ fi
 
 trap cleanup EXIT
 
-[[ -n ''${RECOVERY_SYSTEM:-} ]] || die "the recovery system closure was not provided"
+[[ -n ${RECOVERY_SYSTEM:-} ]] || die "the recovery system closure was not provided"
 [[ -b $recovery_device ]] || die "missing partition $recovery_device; follow recovery/README.md first"
 [[ -b $recovery_efi_device ]] || die "missing partition $recovery_efi_device; follow recovery/README.md first"
 [[ -r $password_hash ]] || die "missing decrypted root password hash: $password_hash"
@@ -83,7 +83,8 @@ mount "$recovery_device" "$mount_root"
 install -d -m 0700 "$mount_root/boot"
 mount "$recovery_efi_device" "$mount_root/boot"
 
-install -d -m 0700 "$mount_root/etc"
+# /etc must stay readable for normal users; the hash file itself is 0600.
+install -d -m 0755 "$mount_root/etc"
 install -m 0600 "$password_hash" "$mount_root/etc/recovery-root-password-hash"
 
 nixos-install \
@@ -91,6 +92,8 @@ nixos-install \
   --system "$RECOVERY_SYSTEM" \
   --no-root-password \
   --no-channel-copy
+
+copy_logins "$mount_root"
 
 nixos-enter --root "$mount_root" --command \
   'nix-env --profile /nix/var/nix/profiles/system --delete-generations old && nix-store --gc'

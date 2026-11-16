@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NixOS Recovery Guide</title>
+<style>
+  /* Colors from labAdwaita-dark and the Adwaita palette, like the rest of the
+     recovery desktop. */
+  :root {
+    color-scheme: dark;
+    --bg: #242424;
+    --card: #303030;
+    --card-hover: #353535;
+    --code: #1e1e1e;
+    --border: #494949;
+    --text: #ffffff;
+    --dim: #c0bfbc;
+    --accent: #3584e4;
+    --accent-text: #78aeed;
+    --green: #57e389;
+    --yellow: #f8e45c;
+    --red: #ff7b63;
+    --radius: 12px;
+    --sans: Cantarell, "Noto Sans", "DejaVu Sans", sans-serif;
+    --mono: "DejaVu Sans Mono", "Noto Sans Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 var(--sans);
+  }
+  main { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  a { color: var(--accent-text); }
+  h1 { font-size: 2.1rem; margin: 0; line-height: 1.2; }
+  h2 { font-size: 1.35rem; margin: 2.75rem 0 1rem; }
+  h3 { font-size: 1.05rem; margin: 0; }
+  p { margin: .5rem 0; }
+  .dim { color: var(--dim); }
+  kbd {
+    font: .85em var(--mono);
+    background: var(--card-hover);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    padding: .05rem .4rem;
+  }
+  code { font: .9em var(--mono); background: var(--code); border-radius: 5px; padding: .1rem .35rem; }
+
+  header { display: flex; gap: 1.1rem; align-items: center; }
+  header svg { flex: none; }
+  .lead { color: var(--dim); font-size: 1.05rem; margin-top: .35rem; }
+
+  .search {
+    width: 100%;
+    margin: 1.75rem 0 .5rem;
+    padding: .7rem 1rem;
+    font: inherit;
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    outline: none;
+  }
+  .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(53, 132, 228, .35); }
+  nav { display: flex; flex-wrap: wrap; gap: .5rem; }
+  nav a {
+    text-decoration: none;
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .3rem .85rem;
+    font-size: .92rem;
+  }
+  nav a:hover { background: var(--card-hover); }
+
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .9rem; counter-reset: step; }
+  .step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    counter-increment: step;
+  }
+  .step::before {
+    content: counter(step);
+    display: inline-grid;
+    place-items: center;
+    width: 1.7rem; height: 1.7rem;
+    border-radius: 50%;
+    background: var(--accent);
+    font-weight: 700;
+    margin-bottom: .5rem;
+  }
+
+  details.case {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: .6rem 0;
+  }
+  details.case > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: .9rem 1.1rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: .15rem 1rem;
+  }
+  details.case > summary::-webkit-details-marker { display: none; }
+  details.case > summary::after {
+    content: "›";
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    font-size: 1.4rem;
+    color: var(--dim);
+    transition: transform .15s;
+  }
+  details.case[open] > summary::after { transform: rotate(90deg); }
+  details.case > summary:hover { background: var(--card-hover); border-radius: var(--radius); }
+  summary .symptom { color: var(--dim); font-size: .93rem; }
+  .body { padding: 0 1.1rem 1rem; border-top: 1px solid var(--border); }
+  .body ol, .body ul { padding-left: 1.3rem; margin: .75rem 0 .25rem; }
+  .body li { margin: .45rem 0; }
+
+  .cmd { position: relative; margin: .45rem 0; }
+  .cmd pre {
+    margin: 0;
+    padding: .65rem 4.75rem .65rem .9rem;
+    background: var(--code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+    font: .88rem/1.5 var(--mono);
+  }
+  .cmd button {
+    position: absolute; top: .4rem; right: .4rem;
+    font: .8rem var(--sans);
+    color: var(--text);
+    background: var(--card-hover);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .2rem .6rem;
+    cursor: pointer;
+  }
+  .cmd button:hover { background: var(--accent); border-color: var(--accent); }
+
+  .note {
+    border-left: 3px solid var(--yellow);
+    background: rgba(248, 228, 92, .07);
+    padding: .55rem .9rem;
+    border-radius: 0 8px 8px 0;
+    margin: .75rem 0;
+  }
+  .note.safe { border-color: var(--green); background: rgba(87, 227, 137, .07); }
+  .tag { font-size: .75rem; font-weight: 700; letter-spacing: .03em; padding: .1rem .45rem; border-radius: 5px; margin-left: .4rem; vertical-align: .1em; }
+  .tag.root { background: rgba(255, 123, 99, .18); color: var(--red); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: .9rem; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; }
+  .tile h3 { margin-bottom: .35rem; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  th, td { text-align: left; padding: .55rem .9rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  th { color: var(--dim); font-weight: 600; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; }
+  td:first-child { white-space: nowrap; }
+
+  .hidden { display: none !important; }
+  footer { margin-top: 3rem; color: var(--dim); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+    <rect width="56" height="56" rx="14" fill="#3584e4"/>
+    <path d="M28 12v32M12 28h32" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+  </svg>
+  <div>
+    <h1>NixOS Recovery</h1>
+    <p class="lead">Your main system didn't start, or something on it broke. Find what you see below and follow the steps.</p>
+  </div>
+</header>
+
+<input class="search" id="filter" type="search" placeholder="Filter: boot, black screen, disk full, network, password…" autocomplete="off">
+<nav>
+  <a href="#start">Start here</a>
+  <a href="#problems">Problems</a>
+  <a href="#desktop">This desktop</a>
+  <a href="#commands">Commands</a>
+  <a href="#good-to-know">Good to know</a>
+  <a href="file:///etc/nixos-recovery/readme.txt">Cheat sheet (all tools)</a>
+</nav>
+
+<h2 id="start">Start here</h2>
+<div class="steps">
+  <div class="step">
+    <h3>Try an older generation</h3>
+    <p class="dim">Reboot into the main disk and pick a previous NixOS generation in its boot menu. Most broken updates are fixed by this alone.</p>
+  </div>
+  <div class="step">
+    <h3>Read what failed</h3>
+    <p class="dim">Click <b>Main System Logs</b> in the dock. It shows the warnings and errors from the main system's last boot, without changing anything.</p>
+  </div>
+  <div class="step">
+    <h3>Fix it from inside</h3>
+    <p class="dim">Click <b>Enter Main System</b> for a root shell inside the main installation, then roll back or rebuild as described below.</p>
+  </div>
+</div>
+
+<h2 id="problems">Problems</h2>
+
+<details class="case" data-keywords="update rebuild config broke black screen desktop nvidia gpu display login rollback generation">
+  <summary>
+    <h3>It broke after an update or a config change</h3>
+    <span class="symptom">Black screen, no login, a service fails, the desktop doesn't start.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Easiest: reboot and choose an older generation in the main boot menu. If it works, make that the default from inside the main system later.</li>
+      <li>Otherwise click <b>Enter Main System</b> and roll back to the previous generation:
+        <div class="cmd"><pre><code>nixos-rebuild boot --rollback</code></pre></div>
+      </li>
+      <li>To fix the configuration instead, set your uncommitted changes aside (they are kept and can be brought back with <code>git stash pop</code>), then rebuild:
+        <div class="cmd"><pre><code>cd /home/abdulrahman/system-conf
+git status
+git stash push --include-untracked --message "set aside from recovery"
+nixos-rebuild boot --flake /home/abdulrahman/system-conf#default</code></pre></div>
+      </li>
+      <li>See what changed between two generations (if <code>nvd</code> is installed on the main system):
+        <div class="cmd"><pre><code>ls -l /nix/var/nix/profiles/ | grep system-
+nvd diff /nix/var/nix/profiles/system-41-link /nix/var/nix/profiles/system-42-link</code></pre></div>
+      </li>
+    </ol>
+    <p class="note safe"><code>nixos-rebuild boot</code> only changes what starts on the next boot. Nothing runs until you reboot into the main disk.</p>
+  </div>
+</details>
+
+<details class="case" data-keywords="boot menu missing firmware no bootable device limine efi grub bootloader bios uefi">
+  <summary>
+    <h3>The computer doesn't find the main system</h3>
+    <span class="symptom">No boot menu, "no bootable device", or it always lands here.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Click <b>Repair Main Bootloader</b> and type <code>REPAIR</code>. It reinstalls Limine and the boot menu on the main disk for the current generation, the same way the installer does.</li>
+      <li>If that reports a damaged EFI partition, check it first, then repair again:
+        <div class="cmd"><pre><code>sudo fsck.vfat -a /dev/disk/by-uuid/FE76-C46F</code></pre></div>
+      </li>
+      <li>Still nothing? Open the firmware's one-time boot menu and choose the Samsung 990 Pro, or check the firmware's boot order (<b>Reboot to Firmware Setup</b> in the session menu).</li>
+    </ol>
+  </div>
+</details>
+
+<details class="case" data-keywords="emergency mode stuck boot hangs mount subvolume rollback interrupted restore root home">
+  <summary>
+    <h3>Boot hangs or drops to emergency mode</h3>
+    <span class="symptom">Stuck on a start job, "emergency mode", or a filesystem won't mount.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Click <b>Main System Logs</b> and look for the first red lines near the end; failed mounts and units are named there.</li>
+      <li>Click <b>Enter Main System</b>. If the main system's start-up rollback was interrupted, it says the <code>root</code> or <code>home</code> subvolume is missing and offers to restore it; type <code>RESTORE</code>. That creates exactly what the next normal boot would.</li>
+      <li>A full disk also stops boots. Check it from inside the main system:
+        <div class="cmd"><pre><code>btrfs filesystem usage /
+ncdu -x /persist</code></pre></div>
+      </li>
+    </ol>
+  </div>
+</details>
+
+<details class="case" data-keywords="disk full space no space left storage nix store garbage">
+  <summary>
+    <h3>The disk is full</h3>
+    <span class="symptom">"No space left on device", builds or boots fail.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Click <b>Enter Main System</b>, then find what grew:
+        <div class="cmd"><pre><code>btrfs filesystem usage /
+ncdu -x /persist
+ncdu -x /nix</code></pre></div>
+      </li>
+      <li>Remove store paths no generation uses. This keeps every generation you can boot:
+        <div class="cmd"><pre><code>nix-collect-garbage</code></pre></div>
+      </li>
+    </ol>
+    <p class="note">Only delete old generations (<code>nix-collect-garbage -d</code>) when you're sure you won't need to boot them again.</p>
+  </div>
+</details>
+
+<details class="case" data-keywords="crash freeze random reboot ram memory memtest overheat temperature hardware">
+  <summary>
+    <h3>Random crashes, freezes or corrupted files</h3>
+    <span class="symptom">The machine reboots or freezes, and it isn't one specific update.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Test the RAM: reboot, and in the recovery disk's boot menu choose <b>Memtest86+ (RAM test)</b>. Let it run at least one full pass.</li>
+      <li>Watch temperatures and load with <b>System Monitor</b> in the dock, or:
+        <div class="cmd"><pre><code>sensors</code></pre></div>
+      </li>
+      <li>Check the drives with <b>Disk Health</b>.</li>
+    </ol>
+  </div>
+</details>
+
+<details class="case" data-keywords="disk failing smart errors rescue copy data backup ddrescue rsync">
+  <summary>
+    <h3>A disk might be failing</h3>
+    <span class="symptom">SMART warnings, I/O errors in the logs, files that won't read.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Click <b>Disk Health</b> for every drive's SMART status.</li>
+      <li>Copy what matters to the recovery disk's data partition (<code>/mnt/SN350</code>) first. Mount the main system read-only:
+        <div class="cmd"><pre><code>sudo mkdir -p /mnt/main
+sudo mount -o ro,subvol=persist /dev/disk/by-uuid/ddb4bdb8-c522-4420-ba2d-ace00fc2054b /mnt/main
+rsync -aHAX --info=progress2 /mnt/main/home/abdulrahman/Documents/ /mnt/SN350/rescue/Documents/</code></pre></div>
+      </li>
+      <li>For a disk that throws read errors, image it with <code>ddrescue</code> instead. Replace <code>/dev/DISK</code> with the failing disk; the same command resumes where it stopped:
+        <div class="cmd"><pre><code>sudo ddrescue -d /dev/DISK /mnt/SN350/disk.img /mnt/SN350/disk.map</code></pre></div>
+      </li>
+    </ol>
+    <p class="note">Check device names with <code>lsblk -f</code> first; <code>nvme0n1</code> and friends can change between boots. The image needs as much free space as the whole disk.</p>
+  </div>
+</details>
+
+<details class="case" data-keywords="network internet wifi wi-fi ethernet dns offline">
+  <summary>
+    <h3>No internet here</h3>
+    <span class="symptom">The browser can't load pages, downloads fail.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Wired Ethernet connects by itself. For Wi-Fi, use the network button in the bar, or:
+        <div class="cmd"><pre><code>nmtui</code></pre></div>
+      </li>
+      <li>Find out where it stops:
+        <div class="cmd"><pre><code>ip -br address
+ping -c3 1.1.1.1
+ping -c3 nixos.org</code></pre></div>
+        If the first ping works and the second doesn't, it's DNS.
+      </li>
+    </ol>
+  </div>
+</details>
+
+<details class="case" data-keywords="this desktop black screen recovery graphics nvidia safe">
+  <summary>
+    <h3>This recovery desktop shows a black screen</h3>
+    <span class="symptom">The recovery disk itself boots, but the screen stays dark.</span>
+  </summary>
+  <div class="body">
+    <ol>
+      <li>Reboot and choose the <b>safe-graphics</b> entry under NixOS Recovery in the recovery disk's boot menu. It runs without the NVIDIA driver.</li>
+      <li>A text console always works: press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F2</kbd> and log in.</li>
+    </ol>
+  </div>
+</details>
+
+<details class="case" data-keywords="password login sudo root forgot">
+  <summary>
+    <h3>Which password?</h3>
+    <span class="symptom">Login, sudo and GParted ask for a password.</span>
+  </summary>
+  <div class="body">
+    <p>Everywhere on the recovery it is <b>the main system's root password</b>, as it was the last time the recovery was updated.</p>
+  </div>
+</details>
+
+<h2 id="desktop">This desktop</h2>
+<div class="grid">
+  <div class="tile">
+    <h3>Dock</h3>
+    <p class="dim">The repair tools and apps. The grid button at its left lists everything installed.</p>
+  </div>
+  <div class="tile">
+    <h3>Click the desktop</h3>
+    <p class="dim">A click on an empty spot opens a menu with every tool, plus reboot, firmware setup and shut down.</p>
+  </div>
+  <div class="tile">
+    <h3>Bar</h3>
+    <p class="dim">Windows (click one to bring it back), CPU, memory and temperature, a screenshot button for error messages, network, and the session menu.</p>
+  </div>
+  <div class="tile">
+    <h3>Shortcuts (optional)</h3>
+    <p class="dim"><kbd>Super</kbd>+<kbd>Space</kbd> launcher · <kbd>Super</kbd>+<kbd>X</kbd> terminal · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>T</kbd> Foot · <kbd>Alt</kbd>+<kbd>Tab</kbd> switch · <kbd>Alt</kbd>+<kbd>F4</kbd> close</p>
+  </div>
+</div>
+
+<h2 id="commands">Commands</h2>
+<p class="dim">The ones you're most likely to need. <a href="file:///etc/nixos-recovery/readme.txt">The cheat sheet</a> (also <code>~/readme.txt</code>) lists every tool with examples.</p>
+<table id="command-table">
+  <tr><th>Command</th><th>What it does</th></tr>
+  <tr><td><code>sudo system-chroot</code><span class="tag root">ROOT</span></td><td>Shell inside the main system; exit to unmount it all.</td></tr>
+  <tr><td><code>sudo system-chroot --reinstall-bootloader</code><span class="tag root">ROOT</span></td><td>Reinstall the main boot menu.</td></tr>
+  <tr><td><code>sudo main-logs</code><span class="tag root">ROOT</span></td><td>Errors from the main system's last boot, read-only.</td></tr>
+  <tr><td><code>sudo disk-health</code><span class="tag root">ROOT</span></td><td>All drives and their SMART health.</td></tr>
+  <tr><td><code>journalctl -b -1 -p err</code></td><td>Inside the main system: errors from the boot before the last.</td></tr>
+  <tr><td><code>nixos-rebuild boot --rollback</code></td><td>Inside the main system: boot the previous generation next time.</td></tr>
+  <tr><td><code>lsblk -f</code></td><td>Every disk, partition, filesystem and label.</td></tr>
+  <tr><td><code>btop</code></td><td>CPU, memory, disks and processes, live.</td></tr>
+  <tr><td><code>sensors</code></td><td>Temperatures and fans.</td></tr>
+  <tr><td><code>ncdu -x /path</code></td><td>What fills a disk.</td></tr>
+  <tr><td><code>fuser -vm /mnt/X</code></td><td>Who keeps a mount busy.</td></tr>
+  <tr><td><code>nmtui</code></td><td>Network and Wi-Fi settings in the terminal.</td></tr>
+  <tr><td><code>nix shell nixpkgs#htop</code></td><td>Any missing tool, for this session (needs internet).</td></tr>
+</table>
+
+<h2 id="good-to-know">Good to know</h2>
+<div class="grid">
+  <div class="tile">
+    <h3>Entering is not read-only</h3>
+    <p class="dim"><b>Enter Main System</b> runs the main system's start-up steps against its real saved state, like a boot does. To only look, use <b>Main System Logs</b> or mount it read-only.</p>
+  </div>
+  <div class="tile">
+    <h3>Separate from the main system</h3>
+    <p class="dim">The recovery has its own browser profile and home folder on the recovery disk. Nothing here changes the main system unless you enter or mount it.</p>
+  </div>
+  <div class="tile">
+    <h3>Keep it current</h3>
+    <p class="dim">From the main system: <code>nix run .#recovery-update</code> in the repository. Try changes first with <code>nix run .#recovery-vm</code>.</p>
+  </div>
+  <div class="tile">
+    <h3>Ask for help</h3>
+    <p class="dim">Claude Code and Codex are installed and signed in: <b>Assistants</b> in the desktop menu or launcher, or <code>claude</code>, <code>codex</code>, <code>claudex</code>, <code>codexx</code> in a terminal. If one asks you to sign in, use <code>/login</code> or <code>codex login</code>.</p>
+  </div>
+  <div class="tile">
+    <h3>Share an error</h3>
+    <p class="dim">Take a screenshot from the bar, or copy logs with <code>journalctl -b -1 -p err | wl-copy</code>, and paste them where you ask.</p>
+  </div>
+</div>
+
+<footer>NixOS Recovery · recovery/docs/guide.html in system-conf</footer>
+</main>
+
+<script>
+  // Copy buttons for every command block.
+  for (const pre of document.querySelectorAll(".cmd pre")) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "Copy";
+    button.addEventListener("click", async () => {
+      const text = pre.innerText.trim();
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(pre);
+        const selection = getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand("copy");
+        selection.removeAllRanges();
+      }
+      button.textContent = "Copied";
+      setTimeout(() => (button.textContent = "Copy"), 1500);
+    });
+    pre.parentElement.appendChild(button);
+  }
+
+  // Filter problems and commands as you type; matching problems open.
+  const filter = document.getElementById("filter");
+  const cases = [...document.querySelectorAll("details.case")];
+  const rows = [...document.querySelectorAll("#command-table tr")].slice(1);
+  filter.addEventListener("input", () => {
+    const words = filter.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const matches = (text) => words.every((word) => text.includes(word));
+    for (const item of cases) {
+      const text = (item.dataset.keywords + " " + item.textContent).toLowerCase();
+      const hit = words.length === 0 || matches(text);
+      item.classList.toggle("hidden", !hit);
+      item.open = words.length > 0 && hit;
+    }
+    for (const row of rows) {
+      row.classList.toggle("hidden", words.length > 0 && !matches(row.textContent.toLowerCase()));
+    }
+  });
+</script>
+</body>
+</html>

@@ -16,7 +16,7 @@ if [[ $EUID -ne 0 ]]; then
   exec "$sudo_wrapper" -- "$0" "$@"
 fi
 
-[[ ''${1:-} == "$confirmation" ]] || die "this erases the SN350; rerun with $confirmation"
+[[ ${1:-} == "$confirmation" ]] || die "this erases the SN350; rerun with $confirmation"
 [[ $# -eq 1 ]] || die "unexpected arguments"
 [[ -b $recovery_disk ]] || die "target disk is unavailable: $recovery_disk"
 

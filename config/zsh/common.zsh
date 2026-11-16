@@ -539,5 +539,8 @@ cpp() {
     END { print "" }' total_size="$(stat -c '%s' "${1}")" count=0
 }
 
-# Loaded separately because the guarded update workflow is substantial.
-source "$HOME/system-conf/config/zsh/update.zsh"
+# Loaded separately because the guarded update workflow is substantial. The
+# recovery system shares this file but has no repository checkout.
+if [[ -r "$HOME/system-conf/config/zsh/update.zsh" ]]; then
+  source "$HOME/system-conf/config/zsh/update.zsh"
+fi

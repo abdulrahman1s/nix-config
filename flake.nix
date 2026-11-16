@@ -66,6 +66,7 @@
       recoverySystem = self.nixosConfigurations.recovery.config.system.build.toplevel;
       recoveryDiskoScript = self.nixosConfigurations.recovery.config.system.build.diskoScript;
       recoveryDiskoUnmountScript = self.nixosConfigurations.recovery.config.system.build.unmount;
+      recoveryUsbConfig = self.nixosConfigurations.recovery-usb.config;
       recoveryPartition = pkgs.writeShellApplication {
         name = "recovery-partition";
         runtimeInputs = with pkgs; [
@@ -77,19 +78,65 @@
         text = ''
           export RECOVERY_DISKO_SCRIPT=${recoveryDiskoScript}
           export RECOVERY_DISKO_UNMOUNT_SCRIPT=${recoveryDiskoUnmountScript}
-          ${builtins.readFile ./recovery/recovery-partition.sh}
+          ${builtins.readFile ./recovery/apps/recovery-partition.sh}
         '';
       };
       recoveryUpdate = pkgs.writeShellApplication {
         name = "recovery-update";
         runtimeInputs = with pkgs; [
           coreutils
+          jq
           nixos-install-tools
           util-linux
         ];
         text = ''
           export RECOVERY_SYSTEM=${recoverySystem}
-          ${builtins.readFile ./recovery/recovery-update.sh}
+          export RECOVERY_USERNAME=${nixpkgs.lib.escapeShellArg userArgs.username}
+          ${builtins.readFile ./recovery/apps/copy-logins.sh}
+          ${builtins.readFile ./recovery/apps/recovery-update.sh}
+        '';
+      };
+      # Installs the recovery system on a USB drive; see recovery/usb.nix.
+      recoveryUsb = pkgs.writeShellApplication {
+        name = "recovery-usb";
+        runtimeInputs = with pkgs; [
+          coreutils
+          dosfstools
+          e2fsprogs
+          gawk
+          gnugrep
+          gptfdisk
+          jq
+          nixos-install-tools
+          systemd
+          util-linux
+        ];
+        text = ''
+          export RECOVERY_SYSTEM=${recoveryUsbConfig.system.build.toplevel}
+          export RECOVERY_USERNAME=${nixpkgs.lib.escapeShellArg userArgs.username}
+          export RECOVERY_USB_ROOT_LABEL=${recoveryUsbConfig.fileSystems."/".label}
+          export RECOVERY_USB_EFI_LABEL=${recoveryUsbConfig.fileSystems."/boot".label}
+          # Every filesystem the main system mounts; recovery-usb refuses a
+          # drive that holds one of them.
+          export RECOVERY_USB_PROTECTED=${pkgs.writeText "main-filesystems.json" (builtins.toJSON (
+            nixpkgs.lib.mapAttrsToList (mountPoint: fs: { inherit mountPoint; inherit (fs) device; })
+              self.nixosConfigurations.default.config.fileSystems
+          ))}
+          ${builtins.readFile ./recovery/apps/copy-logins.sh}
+          ${builtins.readFile ./recovery/apps/recovery-usb.sh}
+        '';
+      };
+      # Boots the recovery configuration in QEMU, signed in to Claude Code and
+      # Codex; see recovery/vm.nix.
+      recoveryVm = pkgs.writeShellApplication {
+        name = "recovery-vm";
+        runtimeInputs = with pkgs; [
+          coreutils
+          jq
+        ];
+        text = ''
+          export RECOVERY_VM=${self.nixosConfigurations.recovery.config.system.build.vm}/bin/run-nixos-recovery-vm
+          ${builtins.readFile ./recovery/apps/recovery-vm.sh}
         '';
       };
     in
@@ -134,10 +181,21 @@
         ];
       };
 
+      # The same recovery system for a USB drive, without the SN350 layout.
+      nixosConfigurations.recovery-usb = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; } // userArgs;
+        modules = [
+          ./recovery/configuration.nix
+          ./recovery/usb.nix
+        ];
+      };
+
       packages.${system} = {
         inherit (maintainedPackages) codex chatgpt photocraft filmcraft sklauncher mangodisk claude-code brave-origin noctalia niri;
         recovery-partition = recoveryPartition;
         recovery-update = recoveryUpdate;
+        recovery-usb = recoveryUsb;
       };
 
       apps.${system} = {
@@ -148,6 +206,14 @@
         recovery-update = {
           type = "app";
           program = "${recoveryUpdate}/bin/recovery-update";
+        };
+        recovery-usb = {
+          type = "app";
+          program = "${recoveryUsb}/bin/recovery-usb";
+        };
+        recovery-vm = {
+          type = "app";
+          program = "${recoveryVm}/bin/recovery-vm";
         };
       };
 

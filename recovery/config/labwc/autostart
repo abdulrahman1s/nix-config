@@ -1,0 +1,5 @@
+# labwc has no output settings of its own; set each monitor's best refresh
+# rate and scale first.
+recovery-displays
+# Starts graphical-session.target, which brings up Noctalia's bar and dock.
+systemctl --user --no-block start labwc-session.target

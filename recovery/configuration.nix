@@ -1,22 +1,14 @@
 # Independently installed NixOS environment for repairing the main impermanent
 # system. It owns a separate Limine bootloader on the SN350.
-{ config, inputs, lib, pkgs, username, ... }:
-let
-  systemChroot = pkgs.writeShellApplication {
-    name = "system-chroot";
-    runtimeInputs = with pkgs; [
-      btrfs-progs
-      coreutils
-      nixos-install-tools
-      util-linux
-    ];
-    text = ''
-      export RECOVERY_USERNAME=${lib.escapeShellArg username}
-      ${builtins.readFile ./system-chroot.sh}
-    '';
-  };
-in
+{ config, lib, pkgs, username, ... }:
 {
+  imports = [
+    ./tools.nix
+    ./desktop.nix
+    ./shell.nix
+    ./vm.nix
+  ];
+
   boot = {
     loader = {
       grub.enable = false;
@@ -28,6 +20,14 @@ in
         efiSupport = true;
         efiInstallAsRemovable = true;
         maxGenerations = 3;
+        # A RAM test that runs without any operating system, for random
+        # crashes or corruption that might be bad memory.
+        additionalFiles."efi/memtest86/memtest.efi" = pkgs.memtest86plus.efi;
+        extraEntries = ''
+          /Memtest86+ (RAM test)
+            protocol: efi
+            path: boot():/efi/memtest86/memtest.efi
+        '';
       };
       timeout = 3;
     };
@@ -44,6 +44,15 @@ in
       ];
     };
     kernelModules = [ "kvm-amd" ];
+    # Same as the main system (system/graphics.nix): fbcon uses the smallest
+    # connected mode, so both outputs get a common 4K boot mode and Ly centers
+    # against the full framebuffer.
+    kernelParams = [
+      "video=DP-3:3840x2160@60"
+      "video=HDMI-A-1:3840x2160@60"
+    ];
+    # The LTS kernel deliberately differs from the main system's CachyOS kernel,
+    # so a regression in one does not take both installations down.
     kernelPackages = pkgs.linuxPackages;
     supportedFilesystems = [
       "btrfs"
@@ -76,88 +85,39 @@ in
 
   services = {
     displayManager = {
-      defaultSession = "niri";
+      defaultSession = "labwc";
       ly.enable = true;
     };
     openssh.enable = false;
+    # Nothing here uses speech synthesis; its voices alone are about 700 MiB.
+    speechd.enable = false;
     udisks2.enable = true;
+    # The hardware.nvidia options below only take effect when this lists nvidia.
+    xserver.videoDrivers = [ "nvidia" ];
   };
-
-  programs.niri.enable = true;
-
-  # Keep the recovery desktop independent from the main system's monitor and
-  # application layout while still providing the same compositor and shell.
-  environment.etc."nixos-recovery/niri/config.kdl".source = ./niri.kdl;
-  environment.etc."nixos-recovery/niri/binds.kdl".source = ../config/niri/binds.kdl;
-  environment.etc."nixos-recovery/niri/cycle-same-app".source = ../config/niri/cycle-same-app;
-  environment.etc."nixos-recovery/niri/focus-column".source = ../config/niri/focus-column;
-  environment.etc."nixos-recovery/niri/game-mode".source = ../config/niri/game-mode;
-  environment.etc."nixos-recovery/niri/maximize-window".source = ../config/niri/maximize-window;
-  environment.etc."nixos-recovery/niri/niri-launch-or-focus".source = ../config/niri/niri-launch-or-focus;
-  environment.etc."nixos-recovery/niri/niri-launch-or-focus-webapp".source = ../config/niri/niri-launch-or-focus-webapp;
-  environment.etc."nixos-recovery/niri/peek-floating-window".source = ../config/niri/peek-floating-window;
-  system.userActivationScripts.recovery-niri-config.text = ''
-    install -d -m 0755 "$HOME/.config/niri"
-    for config in /etc/nixos-recovery/niri/*; do
-      ln -sfn "$config" "$HOME/.config/niri/$(basename "$config")"
-    done
-  '';
 
   hardware = {
     enableRedistributableFirmware = true;
     graphics.enable = true;
     nvidia = {
+      # The RTX 5090 (Blackwell) is only supported by the open kernel modules.
       open = true;
       modesetting.enable = true;
+      nvidiaSettings = false;
       package = config.boot.kernelPackages.nvidiaPackages.stable;
     };
   };
 
-  systemd.user.services.polkit-gnome-authentication-agent = {
-    description = "PolicyKit authentication agent";
-    wantedBy = [ "graphical-session.target" ];
-    after = [ "graphical-session.target" ];
-    partOf = [ "graphical-session.target" ];
-    serviceConfig = {
-      ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
-      Restart = "on-failure";
-    };
+  # A second boot entry without the NVIDIA driver, for when it fails to load or
+  # shows a black screen: nouveau if it can drive the card, otherwise the
+  # firmware framebuffer with software rendering.
+  specialisation.safe-graphics.configuration = {
+    system.nixos.tags = [ "safe-graphics" ];
+    services.xserver.videoDrivers = lib.mkForce [
+      "modesetting"
+      "fbdev"
+    ];
   };
-
-  environment.systemPackages = with pkgs; [
-    systemChroot
-    inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.noctalia
-    # A native package is intentional here because this separate repair
-    # installation does not have the main system's NixPak runtime or profile paths.
-    inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.brave-origin
-    btrfs-progs
-    cryptsetup
-    curl
-    ddrescue
-    dosfstools
-    e2fsprogs
-    efibootmgr
-    git
-    gparted
-    gptfdisk
-    nano
-    networkmanager
-    networkmanagerapplet
-    nixos-install-tools
-    nvme-cli
-    parted
-    pciutils
-    pcmanfm
-    polkit_gnome
-    ripgrep
-    smartmontools
-    testdisk
-    usbutils
-    vim
-    wget
-    wl-clipboard
-    xterm
-  ];
 
   nix = {
     settings.experimental-features = [ "nix-command" "flakes" ];
@@ -177,6 +137,16 @@ in
       wheelNeedsPassword = true;
     };
   };
+
+  # Ly fixes shared with the main system (modules/desktop.nix and
+  # configuration.nix): Ly draws with the console font, which needs to be large
+  # on 4K, and it owns tty1, so no getty may compete for that console.
+  console = {
+    font = "ter-v32n";
+    packages = [ pkgs.terminus_font ];
+  };
+  systemd.services."getty@tty1".enable = false;
+  systemd.services."autovt@tty1".enable = false;
 
   time.timeZone = "Africa/Cairo";
   i18n.defaultLocale = "en_US.UTF-8";
