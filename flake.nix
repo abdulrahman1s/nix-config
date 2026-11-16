@@ -160,6 +160,8 @@
           import ./sandboxed-apps/test-gpu-devices.nix { inherit pkgs nixpak; };
         sandbox-system-trust =
           import ./sandboxed-apps/test-system-trust.nix { inherit pkgs nixpak; };
+        sandbox-runtime-isolation =
+          import ./sandboxed-apps/test-runtime-isolation.nix { inherit pkgs nixpak; };
       };
     };
 }

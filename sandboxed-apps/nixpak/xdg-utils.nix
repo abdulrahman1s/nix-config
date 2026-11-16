@@ -1,23 +1,11 @@
 { pkgs, ... }:
 
 let
-  # Portal-aware xdg-open using dbus-send to communicate with xdg-desktop-portal
-  # https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.OpenURI.html
+  # NixOS' xdg-open handles local paths/file URIs with OpenFile (FD passing)
+  # and external links with OpenURI when portal mode is enabled.
   mkSandboxedXdgUtils = pkgs.writeShellScriptBin "xdg-open" ''
-    if [ -z "$1" ]; then
-      echo "Usage: xdg-open <url>" >&2
-      exit 1
-    fi
-
-    exec ${pkgs.dbus}/bin/dbus-send \
-      --session \
-      --print-reply \
-      --dest=org.freedesktop.portal.Desktop \
-      /org/freedesktop/portal/desktop \
-      org.freedesktop.portal.OpenURI.OpenURI \
-      string:"" \
-      string:"$1" \
-      array:dict:string:variant:
+    export NIXOS_XDG_OPEN_USE_PORTAL=1
+    exec ${pkgs.xdg-utils}/bin/xdg-open "$@"
   '';
 in
 pkgs.symlinkJoin {

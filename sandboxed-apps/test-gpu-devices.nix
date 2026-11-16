@@ -6,7 +6,18 @@ let
 
   stubPackage = pkgs.writeShellApplication {
     name = "test-gpu-devices";
-    text = "exit 0";
+    text = ''
+      for key in VK_DRIVER_FILES __EGL_VENDOR_LIBRARY_FILENAMES GBM_BACKEND; do
+        if [[ -v $key ]]; then
+          echo "Unexpected empty GPU override: $key" >&2
+          exit 1
+        fi
+      done
+      if [[ $VK_ICD_FILENAMES != /test/driver.json ]]; then
+        echo "Nonempty GPU driver override was lost" >&2
+        exit 1
+      fi
+    '';
   };
 
   sandbox = helpers.mkSandboxed {
@@ -27,8 +38,8 @@ pkgs.runCommand "sandbox-gpu-devices-test"
     set -euo pipefail
 
     launcher=$(${pkgs.coreutils}/bin/readlink -f ${sandbox}/bin/test-gpu-devices)
-    args_file=$(${pkgs.gnused}/bin/sed -n \
-      "s|^export BUBBLEWRAP_ARGS='\\(.*\\)'$|\\1|p" "$launcher")
+    config_file=$(${pkgs.gnused}/bin/sed -n '2p' "$launcher")
+    args_file=$(jq -r '.bwrap.args' "$config_file")
     test -n "$args_file"
 
     for device in \
@@ -44,6 +55,12 @@ pkgs.runCommand "sandbox-gpu-devices-test"
       test "$(jq --arg device "$device" \
         '[.[] | select(. == $device)] | length' "$args_file")" -eq 2
     done
+
+    # Run the application's inner wrapper with Sloth's empty fallbacks, without
+    # requiring a GPU or nested user namespaces in the Nix build sandbox.
+    app=$(${pkgs.gnused}/bin/sed -n '3p' "$launcher")
+    env VK_DRIVER_FILES= __EGL_VENDOR_LIBRARY_FILENAMES= GBM_BACKEND= \
+      VK_ICD_FILENAMES=/test/driver.json "$app"
 
     touch "$out"
   ''

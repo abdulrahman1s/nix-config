@@ -33,8 +33,8 @@ pkgs.runCommand "sandbox-system-trust-test"
     test "$expected_paths" = '["/etc/ssl/certs","/etc/static/ssl/certs"]'
 
     launcher=$(${pkgs.coreutils}/bin/readlink -f ${sandbox}/bin/test-system-trust)
-    args_file=$(${pkgs.gnused}/bin/sed -n \
-      "s|^export BUBBLEWRAP_ARGS='\\(.*\\)'$|\\1|p" "$launcher")
+    config_file=$(${pkgs.gnused}/bin/sed -n '2p' "$launcher")
+    args_file=$(jq -r '.bwrap.args' "$config_file")
     test -n "$args_file"
 
     ssl_index=$(jq 'to_entries

@@ -7,9 +7,9 @@
 #   - newSession (TIOCSTI protection)
 #   - dieWithParent (cleanup on parent exit)
 #   - Dummy machine-id (anti-fingerprinting)
-#   - Read-only: fonts, complete system trust store, D-Bus socket, icons,
+#   - Read-only: fonts, complete system trust store, icons,
 #                localtime, os-release, resolv.conf, hosts
-#   - Read-write: XDG_RUNTIME_DIR, ~/.config/<configDir>
+#   - Read-write: app profile; explicitly selected runtime sockets only
 #
 # The wayland preset additionally provides (read-only):
 #   - GNOME/GTK theming: dconf database, gtk-3.0, gtk-4.0 settings
@@ -72,6 +72,7 @@
 let
   pathBindingLib = import ./path-binding.nix { inherit pkgs; };
   inherit (pathBindingLib) maxPathSlots mkPathBindingLauncher;
+  sandboxedXdgUtils = pkgs.callPackage ./xdg-utils.nix { };
 
   # mkSandboxed is defined further down in this `let` block; Nix lazy
   # bindings make the forward reference fine. The wrapper-side function
@@ -96,6 +97,13 @@ let
   systemTrustPaths = [
     "/etc/ssl/certs"
     "/etc/static/ssl/certs"
+  ];
+
+  gpuEnvironmentVariables = [
+    "LIBGL_DRIVERS_PATH" "LIBVA_DRIVER_NAME" "VDPAU_DRIVER" "GBM_BACKEND"
+    "VK_DRIVER_FILES" "VK_ICD_FILENAMES" "VK_LAYER_PATH" "VK_ADD_LAYER_PATH"
+    "__GLX_VENDOR_LIBRARY_NAME" "__EGL_VENDOR_LIBRARY_FILENAMES"
+    "__NV_PRIME_RENDER_OFFLOAD" "__VK_LAYER_NV_optimus"
   ];
 
   mkSandboxed =
@@ -160,14 +168,27 @@ let
       finalDisplayName =
         if displayName != null then displayName else "${package.meta.description or name} (Secure)";
 
-      # If extra packages are requested, create a combined environment
+      # Sloth cannot omit an optional --setenv at launch time. GPU loaders
+      # treat empty driver overrides differently from unset ones, so the gpu
+      # preset restores unset defaults before entering the application's wrapper.
       envPackage =
-        if extraPackages == [ ] then
+        if extraPackages == [ ] && !(builtins.elem "gpu" presets) then
           package
         else
           pkgs.symlinkJoin {
             name = "${name}-env";
             paths = [ package ] ++ extraPackages;
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            postBuild = pkgs.lib.optionalString (builtins.elem "gpu" presets) ''
+              wrapProgram "$out/${binPath}" --run ${pkgs.lib.escapeShellArg ''
+                for key in ${pkgs.lib.concatStringsSep " " gpuEnvironmentVariables}; do
+                  if [ -z "''${!key:-}" ]; then
+                    unset "$key"
+                  fi
+                done
+                unset key
+              ''}
+            '';
           };
 
       # Host-home bind helper. When `username` is set in the framework
@@ -225,6 +246,7 @@ let
         wayland =
           { sloth, ... }:
           {
+            bubblewrap.sockets.wayland = true;
             bubblewrap.env = {
               NIXOS_OZONE_WL = "1"; # Chromium/Electron native Wayland
               XDG_SESSION_TYPE = "wayland";
@@ -280,10 +302,10 @@ let
           };
 
         controller = {
-          bubblewrap.bind.dev = [
-            "/dev/uinput" # Write access required to inject input events
-            "/dev/input"
-          ];
+          # udev creates nodes here only for ID_INPUT_JOYSTICK devices.
+          # Exposing /dev/input or uinput also permits keylogging/injection.
+          bubblewrap.bind.dev = [ [ "/dev/sandbox-input" "/dev/input" ] ];
+          bubblewrap.bind.ro = [ "/run/udev/data" ];
         };
 
         gpu = {
@@ -327,6 +349,10 @@ let
         audio =
           { sloth, ... }:
           {
+            bubblewrap.sockets.pulse = true;
+            # libpulse rejects an empty PULSE_SERVER instead of discovering
+            # the default. Point clients at the socket mounted by this preset.
+            bubblewrap.env.PULSE_SERVER = sloth.concat [ "unix:" sloth.runtimeDir "/pulse/native" ];
             bubblewrap.bind.rw = [
               (sloth.concat' sloth.runtimeDir "/pipewire-0")
             ];
@@ -364,16 +390,14 @@ let
           {
             dbus.policies = {
               "org.freedesktop.DBus" = "talk";
-              "org.freedesktop.portal.*" = "talk"; # File picker, screen share, open URI, etc.
-              "org.gtk.vfs" = "talk";
-              "org.gtk.vfs.*" = "talk";
+              "org.freedesktop.portal.Desktop" = "talk";
+              "org.freedesktop.portal.Documents" = "talk";
             };
 
             # Keep the document portal FUSE mount visible inside the sandbox.
             # File transfers over clipboard/drag-and-drop use this path.
             bubblewrap.bind.rw = pkgs.lib.mkAfter [
               (sloth.concat' sloth.runtimeDir "/doc")
-              (sloth.concat' sloth.runtimeDir "/gvfsd")
             ];
           };
 
@@ -418,10 +442,14 @@ let
         # BlueZ D-Bus surface. Pair with the `audio` preset for A2DP
         # playback — PipeWire bridges Bluetooth audio over the standard
         # pipewire-0 socket, so no extra device binds are needed.
-        bluetooth = {
-          dbus.policies = {
-            "org.bluez" = "talk";
-          };
+        bluetooth = { sloth, ... }: {
+          # BlueZ lives on the system bus, not the session bus. The outer
+          # launcher supplies a filtered socket with access only to BlueZ.
+          bubblewrap.bind.rw = [
+            [ (sloth.env "SANDBOX_SYSTEM_BUS_SOCKET") "/run/dbus/system_bus_socket" ]
+          ];
+          bubblewrap.env.DBUS_SYSTEM_BUS_ADDRESS = "unix:path=/run/dbus/system_bus_socket";
+          bubblewrap.env.SANDBOX_SYSTEM_BUS_SOCKET = "";
         };
 
         # /dev/kvm for hardware-accelerated virtualization (QEMU,
@@ -493,10 +521,44 @@ let
                     "${appId}.*" = "own";
                   };
 
+                  # Opening a link or visible local path is available to every
+                  # app; other portal interfaces still require the portals preset.
+                  dbus.rules.call."org.freedesktop.portal.Desktop" = [
+                    "org.freedesktop.DBus.Introspectable.Introspect@/org/freedesktop/portal/desktop"
+                    "org.freedesktop.portal.OpenURI.*@/org/freedesktop/portal/desktop"
+                  ];
+
                   # --- SANDBOX HARDENING ---
                   bubblewrap.newSession = true; # Prevent TIOCSTI terminal injection
                   bubblewrap.dieWithParent = true; # Kill sandbox when parent exits
                   bubblewrap.tmpfs = [ "/tmp" ]; # Private /tmp per sandbox
+
+                  # Shells export API credentials; a filesystem sandbox does not
+                  # prevent applications from reading inherited environment data.
+                  bubblewrap.clearEnv = true;
+                  bubblewrap.env = pkgs.lib.genAttrs ([
+                    "HOME" "USER" "LOGNAME" "TERM" "TZ" "TZDIR" "LD_LIBRARY_PATH"
+                    "LANG" "LANGUAGE" "LC_ALL" "LC_CTYPE" "LC_COLLATE"
+                    "LC_MESSAGES" "LC_MONETARY" "LC_NUMERIC" "LC_TIME"
+                    "XDG_RUNTIME_DIR" "XDG_CURRENT_DESKTOP" "XDG_SESSION_DESKTOP" "XDG_SESSION_TYPE"
+                    "DESKTOP_SESSION" "XDG_CONFIG_HOME" "XDG_CACHE_HOME"
+                    "XDG_DATA_HOME" "XDG_STATE_HOME" "XDG_CONFIG_DIRS" "XDG_DATA_DIRS"
+                    "DISPLAY" "XAUTHORITY" "WAYLAND_DISPLAY"
+                    "XCURSOR_THEME" "XCURSOR_SIZE" "XCURSOR_PATH" "GTK_THEME" "GTK_USE_PORTAL"
+                    "NO_AT_BRIDGE"
+                    "GTK_PATH" "GTK_A11Y" "GDK_PIXBUF_MODULE_FILE" "GIO_EXTRA_MODULES"
+                    "GST_PLUGIN_SYSTEM_PATH_1_0" "SDL_VIDEODRIVER"
+                    "QT_STYLE_OVERRIDE" "QT_QPA_PLATFORMTHEME"
+                    "SSL_CERT_FILE" "NIX_SSL_CERT_FILE"
+                    "MANGOHUD" "MANGOHUD_CONFIG" "DISABLE_MANGOHUD"
+                  ] ++ gpuEnvironmentVariables) (key: pkgs.lib.mkDefault (sloth.envOr key "")) // {
+                    PATH = pkgs.lib.mkDefault (sloth.concat [ "${sandboxedXdgUtils}/bin:" (sloth.envOr "PATH" "") ]);
+                    # Also covers xdg-open inside nested AppImage/FHS wrappers,
+                    # which prepend their own /usr/bin ahead of our helper.
+                    NIXOS_XDG_OPEN_USE_PORTAL = "1";
+                    SSL_CERT_FILE = pkgs.lib.mkDefault (sloth.envOr "SSL_CERT_FILE" "/etc/ssl/certs/ca-certificates.crt");
+                    NIX_SSL_CERT_FILE = pkgs.lib.mkDefault (sloth.envOr "NIX_SSL_CERT_FILE" "/etc/ssl/certs/ca-certificates.crt");
+                  };
 
                   # Offline by default. nixpak's own default is `true`, so without
                   # this an app that omits the "network" preset silently keeps
@@ -514,12 +576,10 @@ let
 
                     "/etc/fonts"
                   ] ++ systemTrustPaths ++ [
-                    "/run/dbus"
                     (mkHomeBindEntry sloth "/.icons")
                   ];
 
                   bubblewrap.bind.rw = [
-                    (sloth.env "XDG_RUNTIME_DIR")
                     (sloth.concat' sloth.homeDir "/.config/${configDir}")
                   ];
                 }
@@ -616,8 +676,45 @@ let
         then mkPathBindingLauncher { inherit name pathBinding innerEntry; }
         else null;
 
-      finalEntry =
+      appEntry =
         if pathBindingLauncher != null then "${pathBindingLauncher}" else innerEntry;
+
+      # Keep the raw system bus outside the mount namespace. A read-only bind
+      # of a Unix socket still permits arbitrary protocol calls through it.
+      systemBusLauncher = pkgs.writeShellScript "${name}-system-bus" ''
+        set -euo pipefail
+        proxy_dir=$(${pkgs.coreutils}/bin/mktemp -d "''${XDG_RUNTIME_DIR:?}/${name}-system-bus.XXXXXXXX")
+        proxy_pid=
+        app_pid=
+        cleanup() {
+          if [ -n "$app_pid" ]; then kill "$app_pid" 2>/dev/null || true; wait "$app_pid" 2>/dev/null || true; fi
+          if [ -n "$proxy_pid" ]; then kill "$proxy_pid" 2>/dev/null || true; wait "$proxy_pid" 2>/dev/null || true; fi
+          ${pkgs.coreutils}/bin/rm -rf -- "$proxy_dir"
+        }
+        trap cleanup EXIT
+        trap 'exit 130' INT
+        trap 'exit 143' TERM
+        ${pkgs.coreutils}/bin/mkfifo -m 0600 "$proxy_dir/ready"
+        exec 3<> "$proxy_dir/ready"
+        ${pkgs.xdg-dbus-proxy}/bin/xdg-dbus-proxy \
+          unix:path=/run/dbus/system_bus_socket "$proxy_dir/bus" \
+          --filter --talk=org.bluez --fd=3 &
+        proxy_pid=$!
+        if ! ${pkgs.coreutils}/bin/timeout 10 ${pkgs.coreutils}/bin/dd \
+          bs=1 count=1 status=none <&3 >/dev/null; then
+          echo "${name}: system D-Bus proxy did not become ready" >&2
+          exit 1
+        fi
+        export SANDBOX_SYSTEM_BUS_SOCKET="$proxy_dir/bus"
+        ${appEntry} "$@" 3>&- &
+        app_pid=$!
+        status=0
+        wait "$app_pid" || status=$?
+        app_pid=
+        exit "$status"
+      '';
+
+      finalEntry = if builtins.elem "bluetooth" presets then systemBusLauncher else appEntry;
 
     in
     pkgs.runCommand "${name}-sandboxed"
