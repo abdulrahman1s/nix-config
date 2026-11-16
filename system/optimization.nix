@@ -63,15 +63,11 @@ in
       automatic = true;
       dates = [ "03:45" ];
     };
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 14d";
-    };
+    gc.automatic = false;
   };
 
   # The pinned CachyOS overlay evaluates against its own nixpkgs source. It is
-  # otherwise build-only and weekly/low-space GC removes it, forcing every
+  # otherwise build-only and manual GC can remove it, forcing every
   # later evaluation to download the same ~40 MiB archive again.
   system.extraDependencies = [
     inputs.nix-cachyos-kernel.inputs.nixpkgs.outPath

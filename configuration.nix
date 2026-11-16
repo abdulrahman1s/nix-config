@@ -44,7 +44,8 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     accept-flake-config = true;
-    trusted-users = [ "root" username ];
+    # Trusted Nix clients can replace security-critical store paths.
+    trusted-users = [ "root" ];
     substituters = lib.mkForce [
       "https://nixos-cache-proxy.cofob.dev"
       "https://cache.nixos.org" # fallback when the Cloudflare proxy is unavailable
@@ -58,8 +59,10 @@
       "abdulrahman1s-r2-cache-2:0FLUhIO7qwnRhMc2pzOp8lC8AFO67a7JKbzZugSpo8M="
     ];
     netrc-file = "/home/${username}/.aws/nix-cache.netrc";
-    # CI can publish a path moments after a local cache miss; check again immediately.
-    narinfo-cache-negative-ttl = 0;
+    # CI can publish a path moments after a local cache miss, so keep misses short-lived.
+    # A TTL of 0 also disables Nix's in-process miss cache: one build then re-queries
+    # every new path on every substituter about three times, which dominates small rebuilds.
+    narinfo-cache-negative-ttl = 60;
     # Give each package all CPU cores without running competing package builds.
     max-jobs = 1;
     cores = 0;
@@ -67,10 +70,9 @@
     always-allow-substitutes = true;
     http-connections = 50;
     warn-dirty = false;
-    # During builds, collect only unreachable store paths before free space
-    # becomes critical. System generations remain GC roots and stay roll-backable.
-    min-free = 25 * 1024 * 1024 * 1024;
-    max-free = 35 * 1024 * 1024 * 1024;
+    # Keep garbage collection manual, including during builds.
+    min-free = 0;
+    max-free = 0;
   };
 
   # Keep enough rollback entries without letting copied kernels/initrds fill EFI.
