@@ -5,11 +5,11 @@
 
 stdenv.mkDerivation rec {
   pname = "digup";
-  version = "0.7.0-beta.1";
+  version = "0.7.0-beta.3";
 
   src = fetchurl {
     url = "https://github.com/ARahim3/DigUp/releases/download/v${version}/DigUp_${version}_amd64.deb";
-    hash = "sha256-dUgSnrF18QySP1vlRBJ5mb4A76BwSypITdwBoUwCP00=";
+    hash = "sha256-gTluY/2SYB3/5LZca5ouSWvP2i0YjrJCIKJDG2jgO9g=";
   };
 
   nativeBuildInputs = [ dpkg autoPatchelfHook wrapGAppsHook3 ];

@@ -50,6 +50,17 @@ window-rule {
     default-window-height { fixed 680; }
 }
 
+// GTK uses the wrapped executable as DigUp's app ID. Its panel and main window
+// share a title, so float both and let each request its own size.
+window-rule {
+    match app-id=r#"^\.?digup-shell(-wrapped_*)?$"#
+    open-floating true
+    // prefer-no-csd otherwise marks even floating GTK windows as tiled.
+    tiled-state false
+    default-column-width {}
+    default-window-height {}
+}
+
 // Mister Download Manager opens its dialogs, progress windows and drop target
 // as separate fixed-size windows. Float them; keep only the main window tiled.
 window-rule {

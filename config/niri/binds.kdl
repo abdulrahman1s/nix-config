@@ -11,6 +11,7 @@ binds {
     Mod+N hotkey-overlay-title="Open a FileManager " repeat=false { spawn "nautilus" "-w"; }
     Mod+Space hotkey-overlay-title="Open Launcher" repeat=false { spawn "vicinae" "toggle"; }
     Ctrl+Space hotkey-overlay-title="Toggle Handy Transcription" repeat=false { spawn "handy" "--toggle-transcription"; }
+    Ctrl+Shift+Space hotkey-overlay-title="Search files with DigUp" repeat=false { spawn "digup" "--toggle"; }
     Mod+S hotkey-overlay-title="Screenshot Region" repeat=false { screenshot; }
     Mod+Shift+S hotkey-overlay-title="Screenshot Full Screen" repeat=false { screenshot-screen; }
     Mod+P hotkey-overlay-title="Open Mission Center " repeat=false { spawn-sh "~/.config/niri/niri-launch-or-focus missioncenter --id io.missioncenter.MissionCenter --toggle-previous --focus-existing"; }

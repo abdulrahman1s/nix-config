@@ -2,7 +2,8 @@
 """
 niri-dynamic-float — float windows whose title/app_id matches rules
 after the window has already been mapped (works around niri's
-open-time-only evaluation of open-floating).
+open-time-only evaluation of open-floating), and recenter selected
+floating windows when their size changes.
 """
 
 import json
@@ -105,6 +106,22 @@ def try_float(window, floated):
                 niri_action({"FocusWindowPrevious": {}})
 
 
+def try_center(window, centered_sizes):
+    rule = matching_rule(window)
+    if rule is None or not rule.get("center") or not window.get("is_floating"):
+        return
+    size = window.get("layout", {}).get("window_size")
+    if not size or min(size) <= 0:
+        return
+    wid = window["id"]
+    if centered_sizes.get(wid) == size:
+        return
+    # Moving a window also emits a layout event. Only react to size changes,
+    # so centering does not loop or fight a manual drag.
+    centered_sizes[wid] = list(size)
+    niri_action({"CenterWindow": {"id": wid}})
+
+
 def event_loop():
     path = niri_socket_path()
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
@@ -113,6 +130,8 @@ def event_loop():
 
         floated: set[int] = set()
         titles: dict[int, str] = {}
+        windows: dict[int, dict] = {}
+        centered_sizes: dict[int, list] = {}
         buf = b""
 
         while True:
@@ -130,8 +149,10 @@ def event_loop():
 
                 if "WindowsChanged" in event:
                     for w in event["WindowsChanged"]["windows"]:
+                        windows[w["id"]] = w
                         titles[w["id"]] = w.get("title", "")
                         try_float(w, floated)
+                        try_center(w, centered_sizes)
 
                 elif "WindowOpenedOrChanged" in event:
                     w = event["WindowOpenedOrChanged"]["window"]
@@ -141,12 +162,22 @@ def event_loop():
                     if old_title is not None and old_title != new_title:
                         print(f"Title changed {wid}: {old_title!r} -> {new_title!r}", flush=True)
                     titles[wid] = new_title
+                    windows[wid] = w
                     try_float(w, floated)
+                    try_center(w, centered_sizes)
+
+                elif "WindowLayoutsChanged" in event:
+                    for wid, layout in event["WindowLayoutsChanged"]["changes"]:
+                        if wid in windows:
+                            windows[wid]["layout"] = layout
+                            try_center(windows[wid], centered_sizes)
 
                 elif "WindowClosed" in event:
                     wid = event["WindowClosed"]["id"]
                     floated.discard(wid)
                     titles.pop(wid, None)
+                    windows.pop(wid, None)
+                    centered_sizes.pop(wid, None)
 
 
 def main():
