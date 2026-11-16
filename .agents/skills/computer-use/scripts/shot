@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Screenshot a niri window, output or the whole desktop without losing the
+# user's clipboard. niri's screenshot actions always copy the image to the
+# clipboard, so the current selection is saved first and restored afterwards.
+#
+#   shot window [ID] [OUT.png]   window by niri id (default: focused); works off-screen
+#   shot output [NAME] [OUT.png] one monitor (default: focused)
+#   shot all [OUT.png]           every monitor
+#   shot region X,Y WxH [OUT.png] logical global coordinates
+#
+# Prints the saved path.
+set -euo pipefail
+
+out_default() { mktemp --tmpdir="${TMPDIR:-/tmp}" "shot-XXXXXX.png"; }
+
+mode=${1:-window}
+shift || true
+
+case "$mode" in
+  window)
+    id=${1:-$(niri msg -j focused-window | jq -r '.id // empty')}
+    [[ -n "$id" ]] || { echo "shot: no focused window; pass an id" >&2; exit 1; }
+    out=${2:-$(out_default)}
+    out=$(realpath -m "$out")
+
+    saved=$(mktemp)
+    type=$(wl-paste --list-types 2>/dev/null | head -n1 || true)
+    if [[ -n "$type" ]]; then
+      wl-paste --no-newline --type "$type" >"$saved" 2>/dev/null || type=""
+    fi
+
+    rm -f "$out"
+    niri msg action screenshot-window --id "$id" --write-to-disk true --path "$out" >/dev/null
+    # The action returns before the file is written.
+    for _ in $(seq 50); do [[ -s "$out" ]] && break; sleep 0.1; done
+
+    if [[ -n "$type" ]]; then
+      wl-copy --type "$type" <"$saved"
+    fi
+    rm -f "$saved"
+    [[ -s "$out" ]] || { echo "shot: niri did not write $out" >&2; exit 1; }
+    ;;
+  output)
+    name=${1:-$(niri msg -j focused-output | jq -r .name)}
+    out=${2:-$(out_default)}
+    grim -o "$name" "$out"
+    ;;
+  all)
+    out=${1:-$(out_default)}
+    grim "$out"
+    ;;
+  region)
+    [[ $# -ge 2 ]] || { echo "usage: shot region X,Y WxH [OUT.png]" >&2; exit 2; }
+    out=${3:-$(out_default)}
+    grim -g "$1 $2" "$out"
+    ;;
+  *)
+    echo "usage: shot {window [ID]|output [NAME]|all|region X,Y WxH} [OUT.png]" >&2
+    exit 2
+    ;;
+esac
+
+echo "$out"

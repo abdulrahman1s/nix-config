@@ -58,6 +58,7 @@ let
     browser-use = "${repositories.browser-use}/skills/browser-use";
     reverse-engineer-anything = "${rea}/lib/rea-agents/skills/reverse-engineer-anything";
     misterdownloadmanager = ../.agents/skills/misterdownloadmanager;
+    computer-use = ../.agents/skills/computer-use;
   };
 
   agentFiles = builtins.listToAttrs (lib.concatMap
@@ -78,6 +79,7 @@ in
   hjem.users.${username}.files = agentFiles // {
     ".codex/skills/reverse-engineer-anything".source = skills.reverse-engineer-anything;
     ".codex/skills/misterdownloadmanager".source = skills.misterdownloadmanager;
+    ".codex/skills/computer-use".source = skills.computer-use;
     ".agents/skills/rtk/SKILL.md".source = rtkSkill;
     ".claude/skills/rtk/SKILL.md".source = rtkSkill;
   };
