@@ -3,14 +3,12 @@
 let
   hardening = import ../system/hardening.nix;
   tokenPath = "/etc/remote-control.token";
-  runtimeDirectory = "remote-control";
-  runtimeDirectoryPath = "/run/${runtimeDirectory}";
   noctalia = inputs.self.packages.${pkgs.stdenv.hostPlatform.system}.noctalia;
   niriPackage = config.programs.niri.package;
   server = pkgs.writeText "remote-control-server.py" (
     builtins.replaceStrings
-      [ "@username@" "@lanAddress@" "@wlClipboard@" "@niri@" "@noctalia@" "@runtimeDirectoryPath@" ]
-      [ username lanAddress "${pkgs.wl-clipboard}" "${niriPackage}" "${noctalia}" runtimeDirectoryPath ]
+      [ "@username@" "@lanAddress@" "@wlClipboard@" "@niri@" "@noctalia@" ]
+      [ username lanAddress "${pkgs.wl-clipboard}" "${niriPackage}" "${noctalia}" ]
       (builtins.readFile ./remote-control-server.py)
   );
 in
@@ -53,8 +51,6 @@ in
       Group = "users";
       ExecStart = "${pkgs.python3}/bin/python3 ${server}";
       LoadCredential = "token:${tokenPath}";
-      RuntimeDirectory = runtimeDirectory;
-      RuntimeDirectoryMode = "0700";
       UMask = "0077";
       Restart = "on-failure";
       RestartSec = "3";

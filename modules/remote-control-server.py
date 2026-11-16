@@ -5,7 +5,6 @@ Endpoints:
   GET  /ping        — health check
   GET  /status      — show session lock state
   GET  /clipboard   — read clipboard
-  GET  /screenshot  — capture focused screen and return PNG
   POST /lock        — lock all sessions
   POST /unlock      — unlock all sessions and wake monitors
   POST /clipboard   — set clipboard (send text as raw body)
@@ -23,7 +22,6 @@ import pwd
 import os
 import socketserver
 import subprocess
-import tempfile
 import threading
 from pathlib import Path
 from urllib.parse import urlparse
@@ -123,15 +121,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _binary(self, code, content_type, data):
-        self.send_response(code)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.end_headers()
-        self.wfile.write(data)
-
     def _run(self, cmd, env=None, uid=None, gid=None):
         try:
             r = subprocess.run(
@@ -181,7 +170,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "/ping":       self._get_ping,
             "/status":     self._get_status,
             "/clipboard":  self._get_clipboard,
-            "/screenshot": self._get_screenshot,
         }
         handler = routes.get(urlparse(self.path).path)
         if handler: handler()
@@ -253,42 +241,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._json(200, {"text": r.stdout})
         else:
             self._json(500, {"status": "error", "detail": r.stderr.strip()})
-
-    def _get_screenshot(self):
-        env, uid, gid = _wayland_env()
-        with tempfile.TemporaryDirectory(
-            prefix="screenshot-",
-            dir="@runtimeDirectoryPath@",
-        ) as tmp_dir:
-            tmp_path = os.path.join(tmp_dir, "screenshot.png")
-            try:
-                r = subprocess.run(
-                    [NIRI, "msg", "action", "screenshot-screen", "--path", tmp_path],
-                    env=env,
-                    user=uid,
-                    group=gid,
-                    capture_output=True,
-                    text=True,
-                    timeout=REQUEST_TIMEOUT_SECONDS,
-                )
-            except subprocess.TimeoutExpired:
-                self._json(504, {"error": "screenshot timed out"})
-                return
-            if r.returncode != 0:
-                self._json(500, {
-                    "status": "error",
-                    "detail": f"niri screenshot failed: {r.stderr.strip()}",
-                })
-                return
-            try:
-                screenshot = Path(tmp_path).read_bytes()
-            except OSError as error:
-                self._json(500, {
-                    "status": "error",
-                    "detail": f"could not read screenshot: {error}",
-                })
-                return
-            self._binary(200, "image/png", screenshot)
 
     # ── POST handlers ────────────────────────────────
 
