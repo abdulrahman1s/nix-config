@@ -338,23 +338,26 @@ class Stats:
 
 
 def configure_nix() -> None:
+    # Keep CI on the system's cache policy; keys in flake nixConfig would also
+    # be forwarded by local clients that cannot change the daemon's trust.
     config = json.loads(
         run(
             [
                 "nix",
                 "eval",
-                "--impure",
                 "--json",
-                "--expr",
-                "(import ./flake.nix).nixConfig",
+                "--no-update-lock-file",
+                ".#nixosConfigurations.default.config.nix.settings",
+                "--apply",
+                "settings: { inherit (settings) substituters trusted-public-keys; }",
             ]
         ).stdout
     )
     extra = "\n".join(
         (
-            "extra-substituters = " + " ".join(config["extra-substituters"]),
+            "extra-substituters = " + " ".join(config["substituters"]),
             "extra-trusted-public-keys = "
-            + " ".join(config["extra-trusted-public-keys"]),
+            + " ".join(config["trusted-public-keys"]),
         )
     )
     os.environ["NIX_CONFIG"] = f"{os.environ.get('NIX_CONFIG', '')}\n{extra}"
