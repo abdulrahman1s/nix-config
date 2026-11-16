@@ -49,12 +49,6 @@ in
   # Activate per-game via Steam launch options: `gamemoderun %command%`.
   programs.gamemode.enable = true;
 
-  # Native exception: EasyPlay builds its own per-game bubblewrap sandbox and runs the
-  # unwrapped umu-launcher from its package; a NixPak wrapper would nest namespaces.
-  programs.easyplay.enable = true;
-  # Keeps EasyPlay loaded without a window so an opened .exe starts at once.
-  programs.easyplay.backgroundService.enable = true;
-
   # NEEDED FOR VR YASTA
   hardware.steam-hardware.enable = true;
 

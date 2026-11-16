@@ -37,11 +37,6 @@
     steam-cleaner.url = "github:abdulrahman1s/steam-cleaner";
     steam-cleaner.inputs.nixpkgs.follows = "nixpkgs";
 
-    # Local checkout; `ref` pins the committed branch so uncommitted work never leaks in.
-    # Pick up new commits with `nix flake update easyplay`.
-    easyplay.url = "git+file:///home/abdulrahman/projects/easyplay?ref=master";
-    easyplay.inputs.nixpkgs.follows = "nixpkgs";
-
     github-fs.url = "github:abdulrahman1s/github-fs";
     github-fs.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -60,7 +55,7 @@
 
   };
 
-  outputs = { self, nixpkgs, agenix, nixpak, nixos-hardware, nix-cachyos-kernel, noctalia, github-fs, qsh, steam-cleaner, easyplay, impermanence, hjem, disko, ... } @ inputs:
+  outputs = { self, nixpkgs, agenix, nixpak, nixos-hardware, nix-cachyos-kernel, noctalia, github-fs, qsh, steam-cleaner, impermanence, hjem, disko, ... } @ inputs:
     let
       system = "x86_64-linux";
       userArgs = import ./specialArgs.nix;
@@ -153,7 +148,6 @@
           agenix.nixosModules.default
           qsh.nixosModules.default
           steam-cleaner.nixosModules.default
-          easyplay.nixosModules.default
           github-fs.nixosModules.default
           impermanence.nixosModules.impermanence
           hjem.nixosModules.default

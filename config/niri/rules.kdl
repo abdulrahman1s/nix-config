@@ -80,20 +80,6 @@ window-rule {
     default-floating-position x=32 y=32 relative-to="bottom-right"
 }
 
-// EasyPlay: the library window opens maximized. Opening a game file while
-// EasyPlay is closed shows a small fixed-size launch window titled just
-// "EasyPlay"; float that one so it is not stretched into a column.
-window-rule {
-    match app-id=r#"^io\.github\.easyplay\.EasyPlay$"#
-    open-maximized true
-}
-
-window-rule {
-    match app-id=r#"^io\.github\.easyplay\.EasyPlay$"# title=r#"^EasyPlay$"#
-    open-maximized false
-    open-floating true
-}
-
 window-rule {
     match app-id=r#"^org\.gnome\.Calculator$"#
     match app-id=r#"^io\.missioncenter\.MissionCenter$"#
