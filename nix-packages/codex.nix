@@ -14,6 +14,10 @@ stdenvNoCC.mkDerivation {
     runHook preInstall
     mkdir -p $out
     cp -R . $out/
+    # sourceRoot "." is the build directory, so the copy includes stdenv's
+    # env-vars file. It names the release tarball and would keep all 150 MiB
+    # of it in every closure that has Codex.
+    rm $out/env-vars
     ln -s bin/codex $out/codex
     runHook postInstall
   '';
