@@ -7,7 +7,6 @@ let
   slimServices = [
     { domain = "homeassistant"; port = 8123; }
     { domain = "homebridge"; port = 8581; }
-    { domain = "logging"; port = 7777; }
     { domain = "vr"; port = 9999; }
     {
       domain = "minecraft";
