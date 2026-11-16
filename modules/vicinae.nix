@@ -124,6 +124,25 @@ let
   extDir = "/home/${username}/.local/share/vicinae/extensions";
 in
 {
+  # Niri starts the packaged service after importing its Wayland environment.
+  # Recover promptly after crashes instead of leaving the launcher unavailable.
+  systemd.user.services.vicinae = {
+    overrideStrategy = "asDropin";
+    # NixOS generates a unit PATH; retain the profiles used to launch apps.
+    path = [
+      "/home/${username}/.local"
+      "/home/${username}/.nix-profile"
+      "/nix/profile"
+      "/home/${username}/.local/state/nix/profile"
+      "/etc/profiles/per-user/${username}"
+      "/nix/var/nix/profiles/default"
+      "/run/current-system/sw"
+    ];
+    serviceConfig = {
+      RestartSec = 2;
+    };
+  };
+
   # The extension directory persists across boots, so removing its tmpfiles
   # rule alone leaves the old store symlink installed.
   system.userActivationScripts.removePersonalAiVicinaeExtension.text = ''
