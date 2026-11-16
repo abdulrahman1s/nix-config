@@ -20,9 +20,10 @@ let
   digup = call ./digup.nix;
   anydesk = call ./anydesk.nix;
   discord = call ./discord.nix;
+  misterdownloadmanager = call ./misterdownloadmanager.nix;
 in
 {
-  imports = [ browser.module ];
+  imports = [ browser.module misterdownloadmanager.module ];
 
   xdg.mime.defaultApplications = {
     "x-scheme-handler/stremio" = "com.sandboxed.stremio.desktop";
@@ -69,7 +70,7 @@ in
     digup
     anydesk
     discord
-  ] ++ browser.packages;
+  ] ++ browser.packages ++ misterdownloadmanager.packages;
 
   services.udev.packages = [ wireview.package ];
 }

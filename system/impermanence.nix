@@ -158,6 +158,10 @@ in
         ".anydesk"
         ".config/blender" # Blender preferences and Blender Lab MCP extension
         ".config/BraveSoftware" # browser profile (logins, cookies, history)
+        {
+          directory = ".local/share/misterdownloadmanager"; # download list, settings, IPC token, torrents state
+          mode = "0700";
+        }
         ".config/lact" # UI settings for the GPU control app
         ".config/openrazer" # remembered Razer device settings
         ".config/openvr" # SteamVR runtime paths

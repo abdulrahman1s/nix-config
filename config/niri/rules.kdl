@@ -50,6 +50,24 @@ window-rule {
     default-window-height { fixed 680; }
 }
 
+// Mister Download Manager opens its dialogs, progress windows and drop target
+// as separate fixed-size windows. Float them; keep only the main window tiled.
+window-rule {
+    match app-id=r#"(?i)^misterdownloadmanager$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"(?i)^misterdownloadmanager$"# title=r#"^Mister Download Manager [0-9.]+$"#
+    open-floating false
+}
+
+window-rule {
+    match app-id=r#"(?i)^misterdownloadmanager$"# title=r#"^Mister Download Manager drop target$"#
+    open-focused false
+    default-floating-position x=32 y=32 relative-to="bottom-right"
+}
+
 window-rule {
     match app-id=r#"^org\.gnome\.Calculator$"#
     match app-id=r#"^io\.missioncenter\.MissionCenter$"#

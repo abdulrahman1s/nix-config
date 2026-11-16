@@ -55,6 +55,7 @@ let
     vercel-react-best-practices = "${repositories.vercel-agent-skills}/skills/react-best-practices";
     web-design-guidelines = "${repositories.vercel-agent-skills}/skills/web-design-guidelines";
     browser-use = "${repositories.browser-use}/skills/browser-use";
+    misterdownloadmanager = ../.agents/skills/misterdownloadmanager;
   };
 
   agentFiles = builtins.listToAttrs (lib.concatMap
@@ -73,6 +74,7 @@ let
 in
 {
   hjem.users.${username}.files = agentFiles // {
+    ".codex/skills/misterdownloadmanager".source = skills.misterdownloadmanager;
     ".agents/skills/rtk/SKILL.md".source = rtkSkill;
     ".claude/skills/rtk/SKILL.md".source = rtkSkill;
   };
