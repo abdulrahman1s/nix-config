@@ -17,6 +17,7 @@ let
   photocraft = call ./photocraft.nix;
   filmcraft = call ./filmcraft.nix;
   digup = call ./digup.nix;
+  anydesk = call ./anydesk.nix;
   discord = call ./discord.nix;
 in
 {
@@ -64,6 +65,7 @@ in
     photocraft
     filmcraft
     digup
+    anydesk
     discord
   ] ++ browser.packages;
 

@@ -27,6 +27,8 @@ binds {
     // Mod+Alt+L hotkey-overlay-title="Lock screen"   { spawn-sh "noctalia msg session lock"; }
     Mod+Shift+Q repeat=false { spawn-sh "noctalia msg panel-toggle session"; }
     Mod+Ctrl+G hotkey-overlay-title="Toggle Game Mode" allow-inhibiting=false repeat=false { spawn-sh "~/.config/niri/game-mode toggle"; }
+    // Keep an escape hatch available when a remote desktop client captures shortcuts.
+    Mod+Ctrl+Escape hotkey-overlay-title="Toggle shortcut capture" allow-inhibiting=false repeat=false { toggle-keyboard-shortcuts-inhibit; }
 
     // ─── Window Management ───
     Mod+Escape repeat=false { close-window; }

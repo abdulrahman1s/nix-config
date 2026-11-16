@@ -21,6 +21,7 @@ window-rule {
     match app-id=r#"^brave-youtube\.com__-.*$"#
     match app-id=r#"^vlc$"#
     match app-id=r#"^ai.storyteller.photocraft$"#
+    match app-id=r#"^Anydesk$"#
     open-maximized true
 }
 
