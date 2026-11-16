@@ -180,6 +180,7 @@ in
         ".local/share/umu"
         ".local/share/atuin"
         ".local/share/zoxide"
+        ".local/share/direnv" # direnv allow/deny decisions must survive home rollback
         ".local/share/rtk" # token savings history and command logs
         {
           directory = ".local/share/vicinae"; # clipboard history and copied data
@@ -274,6 +275,10 @@ in
         ".cache/cliphist" # clipboard history db
         ".local/share/com.pais.handy"
         ".sklauncher"
+        {
+          directory = ".local/share/horizon-launcher"; # releases, prepared Minecraft assets, and launcher settings
+          mode = "0700";
+        }
         ".config/sklauncher" # SKlauncher 4 Electron settings and sign-in
 
         ".pki" # NSS cert db (client certs)
