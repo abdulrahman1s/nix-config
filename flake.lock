@@ -40,6 +40,29 @@
         "type": "github"
       }
     },
+    "easyplay": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-overlay": "rust-overlay"
+      },
+      "locked": {
+        "lastModified": 1794713519,
+        "narHash": "sha256-VJ3fhaZHPl11RzoiQ9sv25Hwwz1TAXOdla9xyx5UdEc=",
+        "ref": "master",
+        "rev": "8b262b41eefdf16cbefde2abd44edde878135119",
+        "revCount": 98,
+        "type": "git",
+        "url": "file:///home/abdulrahman/projects/easyplay"
+      },
+      "original": {
+        "ref": "master",
+        "type": "git",
+        "url": "file:///home/abdulrahman/projects/easyplay"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -92,6 +115,24 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1794427683,
+        "narHash": "sha256-o7ey9gEilsxaifqJWnBDlYSKbNWYQYtKwDyXeZU2kaU=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "cd489559845d81f673a12885576016c65cbe9363",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
         "type": "github"
       }
     },
@@ -380,6 +421,7 @@
       "inputs": {
         "agenix": "agenix",
         "disko": "disko",
+        "easyplay": "easyplay",
         "github-fs": "github-fs",
         "hjem": "hjem",
         "impermanence": "impermanence",
@@ -390,6 +432,27 @@
         "noctalia": "noctalia",
         "qsh": "qsh",
         "steam-cleaner": "steam-cleaner"
+      }
+    },
+    "rust-overlay": {
+      "inputs": {
+        "nixpkgs": [
+          "easyplay",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1794388042,
+        "narHash": "sha256-rsskkiDNmuZGK6Xk3JvWUxWENjuX4Jf0hOSFYujGC0s=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "0070500a3d72ade21323092e7bdd7125c5268482",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
       }
     },
     "steam-cleaner": {
@@ -409,6 +472,21 @@
       "original": {
         "owner": "abdulrahman1s",
         "repo": "steam-cleaner",
+        "type": "github"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1791244623,
+        "narHash": "sha256-uuanbkFk8a313Zfrxdcz8Us/yQtaxNnKJtX8v0ZPpd8=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "d36eeed142f88b5a636f2e3856a53c61654cf29b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
         "type": "github"
       }
     }

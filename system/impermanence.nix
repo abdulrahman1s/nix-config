@@ -178,6 +178,18 @@ in
         ".config/openrazer" # remembered Razer device settings
         ".config/openvr" # SteamVR runtime paths
         ".local/share/umu"
+        {
+          directory = ".config/easyplay"; # preferences
+          mode = "0700";
+        }
+        {
+          directory = ".local/share/easyplay"; # library database, prefixes, runtimes, artwork
+          mode = "0700";
+        }
+        {
+          directory = ".local/state/easyplay"; # application and session logs, window geometry
+          mode = "0700";
+        }
         ".local/share/atuin"
         ".local/share/zoxide"
         ".local/share/direnv" # direnv allow/deny decisions must survive home rollback
