@@ -191,6 +191,12 @@
         ];
       };
 
+      # What CI builds into the binary cache: the same system without modules
+      # whose sources are licensed downloads imported into the store by hand.
+      nixosConfigurations.ci = self.nixosConfigurations.default.extendModules {
+        modules = [ { disabledModules = [ ./modules/s4mp.nix ]; } ];
+      };
+
       packages.${system} = {
         inherit (maintainedPackages) codex chatgpt photocraft filmcraft sklauncher mangodisk claude-code brave-origin noctalia niri;
         recovery-partition = recoveryPartition;

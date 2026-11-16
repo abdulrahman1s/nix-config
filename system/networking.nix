@@ -99,7 +99,6 @@
 
     firewall = {
       enable = true;
-      allowedTCPPorts = [ 7654 ]; # S4MP multiplayer hosting over LAN or VPN.
       interfaces.${lanInterface}.allowedTCPPorts = [ 8901 ];
     };
   };

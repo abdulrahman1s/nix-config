@@ -28,6 +28,8 @@ PRUNED_SYSTEM_KEY = "ci/pruned-system-drv"
 PART_SIZE = 8 * 1024 * 1024
 SINGLE_UPLOAD_LIMIT = 50 * 1024 * 1024
 STORE_HASH = re.compile(r"^[0-9a-df-np-sv-z]{32}$")
+# flake.nix's CI variant leaves out packages that need licensed downloads.
+SYSTEM = ".#nixosConfigurations.ci"
 NAR_KEY = re.compile(r"^nar/[0-9a-z]+\.nar\.zst$")
 
 
@@ -354,7 +356,7 @@ def configure_nix() -> None:
                 "eval",
                 "--json",
                 "--no-update-lock-file",
-                ".#nixosConfigurations.default.config.nix.settings",
+                f"{SYSTEM}.config.nix.settings",
                 "--apply",
                 "settings: { inherit (settings) substituters trusted-public-keys; }",
             ]
@@ -577,7 +579,7 @@ def evaluate_targets(
                     "nix",
                     "eval",
                     "--json",
-                    ".#nixosConfigurations.default",
+                    SYSTEM,
                     "--apply",
                     expression,
                     "--no-update-lock-file",
@@ -744,7 +746,7 @@ def build_system(stats: Stats) -> bool:
         [
             "nix",
             "build",
-            ".#nixosConfigurations.default.config.system.build.toplevel",
+            f"{SYSTEM}.config.system.build.toplevel",
             "--no-link",
             "--no-update-lock-file",
             "--print-build-logs",

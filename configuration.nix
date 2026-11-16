@@ -9,6 +9,7 @@
 
       # Feature modules
       ./modules/gaming.nix
+      ./modules/s4mp.nix
       ./modules/desktop.nix
       ./modules/development.nix
       ./modules/ios.nix
