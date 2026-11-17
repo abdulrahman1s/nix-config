@@ -20,12 +20,12 @@
     "hash": "sha256-/xF9dRn20DaJcxK3mumhp75pWnXUO7BldqtrVnkRQPk="
   },
   "mangodisk": {
-    "version": "2.0.0",
-    "hash": "sha256-P3lVhQllyxrZ78BygYPMPHUESfrT3Am/meMhzluQJY4="
+    "version": "2.1.0",
+    "hash": "sha256-T7CTOQ/R9/H7syBe89bL9JFa6DcDCpQmkEN4PNHtcgc="
   },
   "claude": {
-    "version": "2.1.325",
-    "sha256": "00b1b977bcc3f32eb69129f0ac3277aafb1aecbfb87c17c0af53806832ed436a"
+    "version": "2.1.326",
+    "sha256": "8a6e8f4fdc137f93359285d0677640dcd73e67a35ffabeab8c042d433d685abd"
   },
   "brave-origin": {
     "version": "1.99.57",
