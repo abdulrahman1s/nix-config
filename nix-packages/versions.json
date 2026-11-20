@@ -1,11 +1,11 @@
 {
   "codex": {
-    "version": "0.170.0",
-    "hash": "sha256-p3/4e+e6gJ1xVygnCnj1zjUn3AdSlBbR74kpuQuEdes="
+    "version": "0.171.0",
+    "hash": "sha256-g5HWd1dJa/0UiT7KbL8MlplL8mJ1Zv8fAY9wYAye9rM="
   },
   "chatgpt": {
-    "version": "26.1111.71704",
-    "hash": "sha256-Ae73x3yDX34a+5K6HCkXikwZ1sZlc73TuGUg4qv4BqQ="
+    "version": "26.1117.31558",
+    "hash": "sha256-bAcgYxT3i8G+URRFmeAdJ4CKUfeOXXjD3rHGgPcEPAM="
   },
   "photocraft": {
     "version": "0.23.1",
@@ -24,8 +24,8 @@
     "hash": "sha256-T7CTOQ/R9/H7syBe89bL9JFa6DcDCpQmkEN4PNHtcgc="
   },
   "claude": {
-    "version": "2.1.328",
-    "sha256": "10f24c9cfcbf3c586e6d281815dce9b561eb8acc6b8c0f26b8f0af5e56fa7605"
+    "version": "2.1.329",
+    "sha256": "e5e52a50cfab8a3573a4896846f499488d822b34e89a4994d8bc990aaf2846c4"
   },
   "brave-origin": {
     "version": "1.100.58",
