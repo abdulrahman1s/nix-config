@@ -4,8 +4,8 @@
     "hash": "sha256-g5HWd1dJa/0UiT7KbL8MlplL8mJ1Zv8fAY9wYAye9rM="
   },
   "chatgpt": {
-    "version": "26.1117.31558",
-    "hash": "sha256-bAcgYxT3i8G+URRFmeAdJ4CKUfeOXXjD3rHGgPcEPAM="
+    "version": "26.1117.41037",
+    "hash": "sha256-gw4lG2ykrUX+aQQSenkOjwD3wm7UyAOUc/cyPHxOJpI="
   },
   "photocraft": {
     "version": "0.23.1",
@@ -20,12 +20,12 @@
     "hash": "sha256-HOw2q5cMvA/oMpcak19FgpCN4kwxrHg5xWf+dyQZFfc="
   },
   "mangodisk": {
-    "version": "2.1.0",
-    "hash": "sha256-T7CTOQ/R9/H7syBe89bL9JFa6DcDCpQmkEN4PNHtcgc="
+    "version": "2.1.1",
+    "hash": "sha256-addQvXrXyWYUHjiBWUmfZ8j3SQviUQfK0xBhldAjRgo="
   },
   "claude": {
-    "version": "2.1.329",
-    "sha256": "e5e52a50cfab8a3573a4896846f499488d822b34e89a4994d8bc990aaf2846c4"
+    "version": "2.1.330",
+    "sha256": "d53a3f9aab93c87bba0813d1101677677b457100824f5c3604fea9915ac5237a"
   },
   "brave-origin": {
     "version": "1.100.58",
