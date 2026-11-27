@@ -20,8 +20,8 @@
     "hash": "sha256-HOw2q5cMvA/oMpcak19FgpCN4kwxrHg5xWf+dyQZFfc="
   },
   "mangodisk": {
-    "version": "2.1.1",
-    "hash": "sha256-addQvXrXyWYUHjiBWUmfZ8j3SQviUQfK0xBhldAjRgo="
+    "version": "2.1.2",
+    "hash": "sha256-grVeunD2rZAZVFrmODEbQDRHgTLSFn14L4v7wfJPrPY="
   },
   "claude": {
     "version": "2.1.332",
